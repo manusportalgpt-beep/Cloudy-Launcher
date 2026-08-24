@@ -173,6 +173,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         "QToolBar#cloudySidebar QToolButton:hover { background: #172a43; }"
         "QToolBar#cloudySidebar QToolButton:pressed { background: #244a78; }"
         "QToolBar#cloudySidebar::separator { height: 1px; background: #26344b; margin: 10px 6px; }"
+        "QToolBar#cloudyNotch { background: #172033; border: 0; border-bottom: 1px solid #26344b; padding: 5px 12px; spacing: 4px; }"
+        "QToolBar#cloudyNotch QToolButton { min-height: 30px; padding: 5px 10px; border-radius: 6px; }"
+        "QToolBar#cloudyNotch QToolButton:hover { background: #22324a; }"
+        "QToolBar#cloudyNotch QToolButton:pressed, QToolBar#cloudyNotch QToolButton:checked { background: #2b4d7d; color: #ffffff; }"
         "QLabel#cloudyBrandName { color: #f2f7ff; font-size: 15px; font-weight: 600; }"
         "QWidget#librarySurface { background: #111b2b; }"
         "QLabel#libraryTitle { color: #f3f7fc; font-size: 25px; font-weight: 600; }"
@@ -190,15 +194,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     ));
     ui->mainToolBar->setMovable(false);
     // Cloudy navigation rail: keep primary destinations in the same window.
-    auto* cloudySidebar = new QToolBar(tr("Cloudy navigation"), this);
-    cloudySidebar->setObjectName(QStringLiteral("cloudySidebar"));
-    cloudySidebar->setOrientation(Qt::Vertical);
-    cloudySidebar->setMovable(false);
-    cloudySidebar->setFloatable(false);
-    cloudySidebar->setIconSize(QSize(20, 20));
-    cloudySidebar->setToolButtonStyle(Qt::ToolButtonTextOnly);
-    cloudySidebar->setMinimumWidth(190);
-    cloudySidebar->setMaximumWidth(210);
+    m_cloudySidebar = new QToolBar(tr("Cloudy navigation"), this);
+    m_cloudySidebar->setObjectName(QStringLiteral("cloudySidebar"));
+    m_cloudySidebar->setOrientation(Qt::Vertical);
+    m_cloudySidebar->setMovable(false);
+    m_cloudySidebar->setFloatable(false);
+    m_cloudySidebar->setIconSize(QSize(20, 20));
+    m_cloudySidebar->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    m_cloudySidebar->setMinimumWidth(190);
+    m_cloudySidebar->setMaximumWidth(210);
     auto* cloudyBrand = new QWidget(this);
     cloudyBrand->setObjectName(QStringLiteral("cloudyBrand"));
     auto* brandLayout = new QHBoxLayout(cloudyBrand);
@@ -211,15 +215,47 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     brandLayout->addWidget(brandIcon);
     brandLayout->addWidget(brandName);
     brandLayout->addStretch();
-    cloudySidebar->addWidget(cloudyBrand);
-    addToolBar(Qt::LeftToolBarArea, cloudySidebar);
+    m_cloudySidebar->addWidget(cloudyBrand);
 
-    auto* libraryAction = cloudySidebar->addAction(tr("Library"));
+    auto* libraryAction = m_cloudySidebar->addAction(tr("Library"));
     libraryAction->setToolTip(tr("Return to your instances"));
     connect(libraryAction, &QAction::triggered, this, &MainWindow::restoreMainContent);
-    cloudySidebar->addSeparator();
-    cloudySidebar->addAction(ui->actionManageAccounts);
-    cloudySidebar->addAction(ui->actionSettings);
+    m_cloudySidebar->addSeparator();
+    m_cloudySidebar->addAction(ui->actionManageAccounts);
+    m_cloudySidebar->addAction(ui->actionSettings);
+
+    // The Notch is the compact alternative to the persistent rail. It reuses
+    // existing actions so navigation behavior and backend wiring stay intact.
+    m_cloudyNotch = new QToolBar(tr("Cloudy compact navigation"), this);
+    m_cloudyNotch->setObjectName(QStringLiteral("cloudyNotch"));
+    m_cloudyNotch->setMovable(false);
+    m_cloudyNotch->setFloatable(false);
+    m_cloudyNotch->setIconSize(QSize(18, 18));
+    m_cloudyNotch->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    auto* notchBrand = new QLabel(tr("Cloudy Launcher"), this);
+    notchBrand->setObjectName(QStringLiteral("cloudyBrandName"));
+    m_cloudyNotch->addWidget(notchBrand);
+    m_cloudyNotch->addSeparator();
+    auto* notchLibrary = m_cloudyNotch->addAction(tr("Library"));
+    notchLibrary->setToolTip(tr("Return to your instances"));
+    connect(notchLibrary, &QAction::triggered, this, &MainWindow::restoreMainContent);
+    m_cloudyNotch->addAction(ui->actionAddInstance);
+    m_cloudyNotch->addAction(ui->actionManageAccounts);
+    m_cloudyNotch->addAction(ui->actionSettings);
+    addToolBar(Qt::LeftToolBarArea, m_cloudySidebar);
+    addToolBar(Qt::TopToolBarArea, m_cloudyNotch);
+
+    auto navigationSetting = APPLICATION->settings()->getOrRegisterSetting(
+        QStringLiteral("CloudyNavigationMode"), QStringLiteral("sidebar"));
+    m_toggleCloudyNavigation = new QAction(tr("Use Notch Panel"), this);
+    m_toggleCloudyNavigation->setCheckable(true);
+    m_toggleCloudyNavigation->setChecked(navigationSetting->get().toString() == QStringLiteral("notch"));
+    connect(m_toggleCloudyNavigation, &QAction::toggled, this, [this](bool notch) {
+        setCloudyNavigationMode(notch);
+    });
+    ui->viewMenu->addSeparator();
+    ui->viewMenu->addAction(m_toggleCloudyNavigation);
+    setCloudyNavigationMode(m_toggleCloudyNavigation->isChecked());
 
     ui->mainToolBar->setIconSize(QSize(18, 18));
 #ifndef QT_NO_ACCESSIBILITY
@@ -604,6 +640,19 @@ void MainWindow::restoreMainContent()
     m_contentStack->setCurrentWidget(ui->centralWidget);
     m_contentStack->removeWidget(page);
     page->deleteLater();
+}
+
+void MainWindow::setCloudyNavigationMode(bool notch)
+{
+    if (!m_cloudySidebar || !m_cloudyNotch)
+        return;
+
+    m_cloudySidebar->setVisible(!notch);
+    m_cloudyNotch->setVisible(notch);
+    if (auto setting = APPLICATION->settings()->getOrRegisterSetting(
+            QStringLiteral("CloudyNavigationMode"), QStringLiteral("sidebar"))) {
+        setting->set(notch ? QStringLiteral("notch") : QStringLiteral("sidebar"));
+    }
 }
 
 MainWindow::~MainWindow() {}
