@@ -91,9 +91,18 @@ ResourcePage::ResourcePage(ResourceDownloadDialog* parent,
 
     auto* delegate = new ProjectItemDelegate(this);
     m_ui->packView->setItemDelegate(delegate);
+    m_ui->packView->setIconSize(QSize(48, 48));
+    m_ui->packView->setUniformItemSizes(false);
+    m_ui->packView->setSpacing(6);
     m_ui->packView->installEventFilter(this);
     m_ui->packView->viewport()->installEventFilter(this);
 
+    m_ui->packDescription->setOpenLinks(false);
+    m_ui->packDescription->setOpenExternalLinks(false);
+    m_ui->packDescription->setStyleSheet(QStringLiteral(
+        "QTextBrowser { background: #111b2b; color: #d8e4f2; border: 1px solid #26344b; border-radius: 10px; padding: 10px; }"
+        "a { color: #78b1e5; text-decoration: none; }"
+        "a:hover { color: #a8d2f4; text-decoration: underline; }"));
     connect(m_ui->packDescription, &QTextBrowser::anchorClicked, this, &ResourcePage::openUrl);
 
     connect(m_ui->packView, &QAbstractItemView::doubleClicked, this, &ResourcePage::onResourceToggle);
