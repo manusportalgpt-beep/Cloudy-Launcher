@@ -57,10 +57,12 @@
 #include <QButtonGroup>
 #include <QFileDialog>
 #include <QHBoxLayout>
+#include <QVBoxLayout>
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMainWindow>
 #include <QMenu>
 #include <QMenuBar>
@@ -172,6 +174,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         "QToolBar#cloudySidebar QToolButton:pressed { background: #244a78; }"
         "QToolBar#cloudySidebar::separator { height: 1px; background: #26344b; margin: 10px 6px; }"
         "QLabel#cloudyBrandName { color: #f2f7ff; font-size: 15px; font-weight: 600; }"
+        "QWidget#librarySurface { background: #111b2b; }"
+        "QLabel#libraryTitle { color: #f3f7fc; font-size: 25px; font-weight: 600; }"
+        "QLabel#librarySubtitle { color: #91a4bb; font-size: 13px; }"
+        "QLineEdit#librarySearch { background: #17263a; color: #e7f0fb; border: 1px solid #2b405d; border-radius: 7px; padding: 8px 12px; min-width: 220px; }"
+        "QLineEdit#librarySearch:focus { border-color: #5e9bd6; }"
         "QToolButton { color: #d8e4f2; border: 1px solid transparent; border-radius: 6px; padding: 7px 9px; }"
         "QToolButton:hover { background: #22324a; border-color: #314968; }"
         "QToolButton:pressed, QToolButton:checked { background: #2b4d7d; color: #ffffff; }"
@@ -395,7 +402,44 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         view->setSourceOfGroupCollapseStatus(
             [](const QString& groupName) -> bool { return APPLICATION->instances()->isGroupCollapsed(groupName); });
         connect(view, &InstanceView::groupStateChanged, APPLICATION->instances(), &InstanceList::on_GroupStateChanged);
-        ui->horizontalLayout->addWidget(view);
+        // Give the existing InstanceView a Cloudy surface without replacing its model or delegate.
+        ui->horizontalLayout->removeWidget(view);
+        auto* librarySurface = new QWidget(ui->centralWidget);
+        librarySurface->setObjectName(QStringLiteral("librarySurface"));
+        auto* libraryLayout = new QVBoxLayout(librarySurface);
+        libraryLayout->setContentsMargins(24, 20, 24, 12);
+        libraryLayout->setSpacing(12);
+
+        auto* libraryHeader = new QHBoxLayout();
+        libraryHeader->setSpacing(12);
+        auto* libraryHeading = new QVBoxLayout();
+        auto* libraryTitle = new QLabel(tr("Library"), librarySurface);
+        libraryTitle->setObjectName(QStringLiteral("libraryTitle"));
+        auto* librarySubtitle = new QLabel(tr("Your Minecraft instances"), librarySurface);
+        librarySubtitle->setObjectName(QStringLiteral("librarySubtitle"));
+        libraryHeading->addWidget(libraryTitle);
+        libraryHeading->addWidget(librarySubtitle);
+        libraryHeader->addLayout(libraryHeading);
+        libraryHeader->addStretch();
+
+        auto* librarySearch = new QLineEdit(librarySurface);
+        librarySearch->setObjectName(QStringLiteral("librarySearch"));
+        librarySearch->setPlaceholderText(tr("Search instances..."));
+        librarySearch->setClearButtonEnabled(true);
+        connect(librarySearch, &QLineEdit::textChanged, proxymodel, &QSortFilterProxyModel::setFilterFixedString);
+        libraryHeader->addWidget(librarySearch);
+
+        auto* createInstanceButton = new QToolButton(librarySurface);
+        createInstanceButton->setText(tr("Create instance"));
+        createInstanceButton->setToolButtonStyle(Qt::ToolButtonTextOnly);
+        createInstanceButton->setObjectName(QStringLiteral("libraryCreateButton"));
+        connect(createInstanceButton, &QToolButton::clicked, ui->actionAddInstance, &QAction::trigger);
+        libraryHeader->addWidget(createInstanceButton);
+        libraryLayout->addLayout(libraryHeader);
+
+        view->setParent(librarySurface);
+        libraryLayout->addWidget(view, 1);
+        ui->horizontalLayout->addWidget(librarySurface);
     }
     // The cat background
     {
