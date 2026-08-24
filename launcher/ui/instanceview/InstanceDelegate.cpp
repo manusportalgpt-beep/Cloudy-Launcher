@@ -201,11 +201,25 @@ void ListViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
 
     textHighlightRect.adjust(0, iconSize + 5, 0, 0);
 
-    // draw background
+    // Draw a NeoPrism-style surface: quiet cards with a clear selected state.
     {
-        // FIXME: unused
-        // QSize textSize = viewItemTextSize ( &opt );
-        drawSelectionRect(painter, opt, textHighlightRect);
+        const QRect cardRect = opt.rect.adjusted(4, 4, -4, -4);
+        const bool selected = opt.state & QStyle::State_Selected;
+        QColor cardColor = selected ? opt.palette.color(QPalette::Highlight) : opt.palette.color(QPalette::Base);
+        if (!selected) {
+            cardColor = cardColor.lighter(112);
+        }
+        painter->setRenderHint(QPainter::Antialiasing, true);
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(cardColor);
+        painter->drawRoundedRect(cardRect, 10, 10);
+        if (selected) {
+            painter->setPen(QPen(opt.palette.color(QPalette::Highlight).lighter(135), 1));
+            painter->setBrush(Qt::NoBrush);
+            painter->drawRoundedRect(cardRect.adjusted(1, 1, -1, -1), 9, 9);
+        }
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(Qt::NoBrush);
         /*
         QPalette::ColorGroup cg;
         QStyleOptionViewItem opt2(opt);
@@ -334,7 +348,7 @@ QSize ListViewDelegate::sizeHint(const QStyleOptionViewItem& option, const QMode
     QSize szz = viewItemTextSize(&opt);
     height += szz.height();
     // FIXME: maybe the icon items could scale and keep proportions?
-    QSize sz(100, height);
+    QSize sz(148, height + 10);
     return sz;
 }
 

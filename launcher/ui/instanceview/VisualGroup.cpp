@@ -149,9 +149,9 @@ void VisualGroup::drawHeader(QPainter* painter, const QStyleOptionViewItem& opti
     painter->setFont(font);
 
     QPen pen;
-    pen.setWidth(2);
+    pen.setWidth(1);
     QColor penColor = option.palette.text().color();
-    penColor.setAlphaF(0.6f);
+    penColor.setAlphaF(0.72f);
     pen.setColor(penColor);
     painter->setPen(pen);
     painter->setRenderHint(QPainter::Antialiasing);
@@ -222,7 +222,7 @@ int VisualGroup::headerHeight()
     QFontMetrics fontMetrics(font);
 
     const int height = fontMetrics.height() + 1 /* 1 pixel-width gradient */
-                       + 11 /* top and bottom separation */;
+                       + 17 /* top and bottom separation */;
     return height;
     /*
     int raw = view->viewport()->fontMetrics().height() + 4;

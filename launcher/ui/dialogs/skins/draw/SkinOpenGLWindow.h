@@ -51,7 +51,13 @@ class SkinOpenGLWindow : public QOpenGLWindow, protected QOpenGLFunctions {
     void mousePressEvent(QMouseEvent* e) override;
     void mouseReleaseEvent(QMouseEvent* e) override;
     void mouseMoveEvent(QMouseEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
+
+   private:
+    void resetView();
+
+   private:
 
     void initializeGL() override;
     void resizeGL(int w, int h) override;

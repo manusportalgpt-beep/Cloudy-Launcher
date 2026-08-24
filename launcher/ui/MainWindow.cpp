@@ -159,15 +159,17 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     setCentralWidget(m_contentStack);
 
     setWindowIcon(APPLICATION->logo());
-    setWindowTitle(APPLICATION->applicationDisplayName());
+    setWindowTitle(QStringLiteral("Cloudy Launcher"));
 
     // Cloudy Launcher foundation: calm hierarchy, compact controls, and purposeful contrast.
     // Keep the existing widgets and backend connections; this layer changes presentation only.
     setMinimumSize(QSize(980, 620));
     setStyleSheet(QStringLiteral(
         "QMainWindow { background: #111827; }"
+        "QWidget#centralWidget { background: #111827; }"
         "QToolBar#mainToolBar { background: #172033; border: 0; border-bottom: 1px solid #26344b; padding: 8px 12px; spacing: 6px; }"
-        "QToolBar#instanceToolBar { background: #131d2e; border: 0; border-right: 1px solid #26344b; padding: 10px 6px; spacing: 5px; }"
+        "QToolBar#instanceToolBar { background: #131d2e; border: 0; border-left: 1px solid #26344b; padding: 14px 10px; spacing: 6px; }"
+        "QToolBar#instanceToolBar QToolButton { min-width: 154px; text-align: left; }"
         "QToolBar#cloudySidebar { background: #0d1523; border: 0; border-right: 1px solid #26344b; padding: 12px 10px; spacing: 4px; }"
         "QToolBar#cloudySidebar QToolButton { min-height: 34px; min-width: 156px; text-align: left; padding: 7px 12px; border-radius: 7px; }"
         "QToolBar#cloudySidebar QToolButton:hover { background: #172a43; }"
@@ -181,8 +183,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         "QWidget#librarySurface { background: #111b2b; }"
         "QLabel#libraryTitle { color: #f3f7fc; font-size: 25px; font-weight: 600; }"
         "QLabel#librarySubtitle { color: #91a4bb; font-size: 13px; }"
-        "QLineEdit#librarySearch { background: #17263a; color: #e7f0fb; border: 1px solid #2b405d; border-radius: 7px; padding: 8px 12px; min-width: 220px; }"
+        "QLineEdit#librarySearch { background: #17263a; color: #e7f0fb; border: 1px solid #2b405d; border-radius: 9px; padding: 9px 13px; min-width: 250px; }"
         "QLineEdit#librarySearch:focus { border-color: #5e9bd6; }"
+        "QToolButton#libraryCreateButton { background: #5e9bd6; color: #08111f; border: 0; border-radius: 9px; padding: 10px 16px; font-weight: 600; }"
+        "QToolButton#libraryCreateButton:hover { background: #78b1e5; }"
+        "QToolButton#libraryCreateButton:pressed { background: #477fae; color: #f3f7fc; }"
         "QToolButton { color: #d8e4f2; border: 1px solid transparent; border-radius: 6px; padding: 7px 9px; }"
         "QToolButton:hover { background: #22324a; border-color: #314968; }"
         "QToolButton:pressed, QToolButton:checked { background: #2b4d7d; color: #ffffff; }"
@@ -193,6 +198,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         "QMenu { background: #172033; color: #d8e4f2; border: 1px solid #31415a; }"
     ));
     ui->mainToolBar->setMovable(false);
+    // Selected-instance actions read as a details rail, not a second navigation column.
+    removeToolBar(ui->instanceToolBar);
+    addToolBar(Qt::RightToolBarArea, ui->instanceToolBar);
     // Cloudy navigation rail: keep primary destinations in the same window.
     m_cloudySidebar = new QToolBar(tr("Cloudy navigation"), this);
     m_cloudySidebar->setObjectName(QStringLiteral("cloudySidebar"));
@@ -220,6 +228,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     auto* libraryAction = m_cloudySidebar->addAction(tr("Library"));
     libraryAction->setToolTip(tr("Return to your instances"));
     connect(libraryAction, &QAction::triggered, this, &MainWindow::restoreMainContent);
+    m_cloudySidebar->addAction(ui->actionAddInstance);
     m_cloudySidebar->addSeparator();
     m_cloudySidebar->addAction(ui->actionManageAccounts);
     m_cloudySidebar->addAction(ui->actionSettings);
@@ -250,6 +259,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     m_toggleCloudyNavigation = new QAction(tr("Use Notch Panel"), this);
     m_toggleCloudyNavigation->setCheckable(true);
     m_toggleCloudyNavigation->setChecked(navigationSetting->get().toString() == QStringLiteral("notch"));
+    m_cloudySidebar->addSeparator();
+    m_cloudySidebar->addAction(m_toggleCloudyNavigation);
+    m_cloudyNotch->addAction(m_toggleCloudyNavigation);
     connect(m_toggleCloudyNavigation, &QAction::toggled, this, [this](bool notch) {
         setCloudyNavigationMode(notch);
     });
@@ -649,6 +661,11 @@ void MainWindow::setCloudyNavigationMode(bool notch)
 
     m_cloudySidebar->setVisible(!notch);
     m_cloudyNotch->setVisible(notch);
+    // Cloudy owns primary navigation; keep the legacy toolbar available through the menu,
+    // but do not let it compete with the redesigned surface.
+    ui->mainToolBar->setVisible(false);
+    ui->newsToolBar->setVisible(false);
+    menuBar()->setVisible(false);
     if (auto setting = APPLICATION->settings()->getOrRegisterSetting(
             QStringLiteral("CloudyNavigationMode"), QStringLiteral("sidebar"))) {
         setting->set(notch ? QStringLiteral("notch") : QStringLiteral("sidebar"));

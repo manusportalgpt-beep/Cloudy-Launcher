@@ -67,6 +67,21 @@ SkinManageDialog::SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct)
     }
 
     setWindowModality(Qt::WindowModal);
+    setWindowTitle(tr("Cloudy Launcher — Skin Studio"));
+    setMinimumSize(QSize(900, 620));
+    setStyleSheet(QStringLiteral(
+        "QDialog { background: #111827; }"
+        "QGroupBox { color: #d8e4f2; border: 1px solid #2b405d; border-radius: 10px; margin-top: 10px; padding: 12px; }"
+        "QGroupBox::title { subcontrol-origin: margin; left: 12px; padding: 0 5px; }"
+        "QListView { background: #0d1523; color: #e7f0fb; border: 1px solid #26344b; border-radius: 10px; padding: 8px; }"
+        "QListView::item { padding: 8px; border-radius: 8px; }"
+        "QListView::item:hover { background: #172a43; }"
+        "QListView::item:selected { background: #2b4d7d; }"
+        "QPushButton { color: #d8e4f2; background: #172033; border: 1px solid #314968; border-radius: 8px; padding: 8px 12px; }"
+        "QPushButton:hover { background: #22324a; }"
+        "QPushButton:default { background: #5e9bd6; color: #08111f; border-color: #5e9bd6; }"
+        "QComboBox, QLineEdit { color: #e7f0fb; background: #17263a; border: 1px solid #2b405d; border-radius: 8px; padding: 8px; }"
+    ));
 
     auto contentsWidget = m_ui->listView;
     contentsWidget->setViewMode(QListView::IconMode);

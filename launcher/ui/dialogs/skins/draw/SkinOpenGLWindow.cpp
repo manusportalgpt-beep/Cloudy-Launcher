@@ -96,7 +96,7 @@ void SkinOpenGLWindow::mouseMoveEvent(QMouseEvent* event)
         int dy = event->position().y() - m_mousePosition.y();
 
         m_yaw += dx * 0.5f;
-        m_pitch += dy * 0.5f;
+        m_pitch = qBound(-42.0f, m_pitch + dy * 0.5f, 42.0f);
 
         // Normalize yaw to keep it manageable
         if (m_yaw > 360.0f)
@@ -114,11 +114,25 @@ void SkinOpenGLWindow::mouseReleaseEvent([[maybe_unused]] QMouseEvent* e)
     m_isMousePressed = false;
 }
 
+void SkinOpenGLWindow::mouseDoubleClickEvent([[maybe_unused]] QMouseEvent* event)
+{
+    resetView();
+}
+
+void SkinOpenGLWindow::resetView()
+{
+    m_yaw = 90.0f;
+    m_pitch = 0.0f;
+    m_distance = 48.0f;
+    update();
+}
+
 void SkinOpenGLWindow::initializeGL()
 {
     initializeOpenGLFunctions();
 
-    glClearColor(0, 0, 1, 1);
+    // Match the Cloudy surface instead of flashing a blue frame during initialization.
+    glClearColor(0.051f, 0.082f, 0.137f, 1.0f);
 
     initShaders();
 
@@ -321,7 +335,7 @@ void SkinOpenGLWindow::wheelEvent(QWheelEvent* event)
     // Adjust distance based on scroll
     int delta = event->angleDelta().y();  // Positive for scroll up, negative for scroll down
     m_distance -= delta * 0.01f;          // Adjust sensitivity factor
-    m_distance = qMax(16.f, m_distance);  // Clamp distance
+    m_distance = qBound(24.0f, m_distance, 72.0f);  // Keep the model framed
     update();                             // Trigger a repaint
 }
 void SkinOpenGLWindow::setElytraVisible(bool visible)
