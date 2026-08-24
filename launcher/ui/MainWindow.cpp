@@ -168,7 +168,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         "QMainWindow { background: #111827; }"
         "QWidget#centralWidget { background: #111827; }"
         "QToolBar#mainToolBar { background: #172033; border: 0; border-bottom: 1px solid #26344b; padding: 8px 12px; spacing: 6px; }"
-        "QToolBar#instanceToolBar { background: #131d2e; border: 0; border-right: 1px solid #26344b; padding: 10px 6px; spacing: 5px; }"
+        "QToolBar#instanceToolBar { background: #131d2e; border: 0; border-left: 1px solid #26344b; padding: 14px 10px; spacing: 6px; }"
+        "QToolBar#instanceToolBar QToolButton { min-width: 154px; text-align: left; }"
         "QToolBar#cloudySidebar { background: #0d1523; border: 0; border-right: 1px solid #26344b; padding: 12px 10px; spacing: 4px; }"
         "QToolBar#cloudySidebar QToolButton { min-height: 34px; min-width: 156px; text-align: left; padding: 7px 12px; border-radius: 7px; }"
         "QToolBar#cloudySidebar QToolButton:hover { background: #172a43; }"
@@ -197,6 +198,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         "QMenu { background: #172033; color: #d8e4f2; border: 1px solid #31415a; }"
     ));
     ui->mainToolBar->setMovable(false);
+    // Selected-instance actions read as a details rail, not a second navigation column.
+    removeToolBar(ui->instanceToolBar);
+    addToolBar(Qt::RightToolBarArea, ui->instanceToolBar);
     // Cloudy navigation rail: keep primary destinations in the same window.
     m_cloudySidebar = new QToolBar(tr("Cloudy navigation"), this);
     m_cloudySidebar->setObjectName(QStringLiteral("cloudySidebar"));
@@ -224,6 +228,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     auto* libraryAction = m_cloudySidebar->addAction(tr("Library"));
     libraryAction->setToolTip(tr("Return to your instances"));
     connect(libraryAction, &QAction::triggered, this, &MainWindow::restoreMainContent);
+    m_cloudySidebar->addAction(ui->actionAddInstance);
     m_cloudySidebar->addSeparator();
     m_cloudySidebar->addAction(ui->actionManageAccounts);
     m_cloudySidebar->addAction(ui->actionSettings);
@@ -653,6 +658,9 @@ void MainWindow::setCloudyNavigationMode(bool notch)
 
     m_cloudySidebar->setVisible(!notch);
     m_cloudyNotch->setVisible(notch);
+    // Cloudy owns primary navigation; keep the legacy toolbar available through the menu,
+    // but do not let it compete with the redesigned surface.
+    ui->mainToolBar->setVisible(false);
     if (auto setting = APPLICATION->settings()->getOrRegisterSetting(
             QStringLiteral("CloudyNavigationMode"), QStringLiteral("sidebar"))) {
         setting->set(notch ? QStringLiteral("notch") : QStringLiteral("sidebar"));
