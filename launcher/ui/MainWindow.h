@@ -51,6 +51,8 @@
 class LaunchController;
 class NewsChecker;
 class QToolButton;
+class QToolBar;
+class QAction;
 class QStackedWidget;
 class InstanceProxyModel;
 class LabeledToolButton;
@@ -87,6 +89,7 @@ class MainWindow : public QMainWindow {
     // Present launcher pages inside the main window instead of spawning utility windows.
     void showEmbeddedPage(QWidget* page);
     void restoreMainContent();
+    void setCloudyNavigationMode(bool notch);
    signals:
     void isClosing();
 
@@ -261,4 +264,7 @@ class MainWindow : public QMainWindow {
     // managed by the application object
     Task* m_versionLoadTask = nullptr;
     QStackedWidget* m_contentStack = nullptr;
+    QToolBar* m_cloudySidebar = nullptr;
+    QToolBar* m_cloudyNotch = nullptr;
+    QAction* m_toggleCloudyNavigation = nullptr;
 };
