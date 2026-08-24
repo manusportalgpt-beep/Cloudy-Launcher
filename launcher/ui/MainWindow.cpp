@@ -259,6 +259,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     m_toggleCloudyNavigation = new QAction(tr("Use Notch Panel"), this);
     m_toggleCloudyNavigation->setCheckable(true);
     m_toggleCloudyNavigation->setChecked(navigationSetting->get().toString() == QStringLiteral("notch"));
+    m_cloudySidebar->addSeparator();
+    m_cloudySidebar->addAction(m_toggleCloudyNavigation);
+    m_cloudyNotch->addAction(m_toggleCloudyNavigation);
     connect(m_toggleCloudyNavigation, &QAction::toggled, this, [this](bool notch) {
         setCloudyNavigationMode(notch);
     });
@@ -661,6 +664,8 @@ void MainWindow::setCloudyNavigationMode(bool notch)
     // Cloudy owns primary navigation; keep the legacy toolbar available through the menu,
     // but do not let it compete with the redesigned surface.
     ui->mainToolBar->setVisible(false);
+    ui->newsToolBar->setVisible(false);
+    menuBar()->setVisible(false);
     if (auto setting = APPLICATION->settings()->getOrRegisterSetting(
             QStringLiteral("CloudyNavigationMode"), QStringLiteral("sidebar"))) {
         setting->set(notch ? QStringLiteral("notch") : QStringLiteral("sidebar"));
