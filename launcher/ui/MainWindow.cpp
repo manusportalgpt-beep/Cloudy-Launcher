@@ -166,6 +166,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     setMinimumSize(QSize(980, 620));
     setStyleSheet(QStringLiteral(
         "QMainWindow { background: #111827; }"
+        "QWidget#centralWidget { background: #111827; }"
         "QToolBar#mainToolBar { background: #172033; border: 0; border-bottom: 1px solid #26344b; padding: 8px 12px; spacing: 6px; }"
         "QToolBar#instanceToolBar { background: #131d2e; border: 0; border-right: 1px solid #26344b; padding: 10px 6px; spacing: 5px; }"
         "QToolBar#cloudySidebar { background: #0d1523; border: 0; border-right: 1px solid #26344b; padding: 12px 10px; spacing: 4px; }"
@@ -181,8 +182,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         "QWidget#librarySurface { background: #111b2b; }"
         "QLabel#libraryTitle { color: #f3f7fc; font-size: 25px; font-weight: 600; }"
         "QLabel#librarySubtitle { color: #91a4bb; font-size: 13px; }"
-        "QLineEdit#librarySearch { background: #17263a; color: #e7f0fb; border: 1px solid #2b405d; border-radius: 7px; padding: 8px 12px; min-width: 220px; }"
+        "QLineEdit#librarySearch { background: #17263a; color: #e7f0fb; border: 1px solid #2b405d; border-radius: 9px; padding: 9px 13px; min-width: 250px; }"
         "QLineEdit#librarySearch:focus { border-color: #5e9bd6; }"
+        "QToolButton#libraryCreateButton { background: #5e9bd6; color: #08111f; border: 0; border-radius: 9px; padding: 10px 16px; font-weight: 600; }"
+        "QToolButton#libraryCreateButton:hover { background: #78b1e5; }"
+        "QToolButton#libraryCreateButton:pressed { background: #477fae; color: #f3f7fc; }"
         "QToolButton { color: #d8e4f2; border: 1px solid transparent; border-radius: 6px; padding: 7px 9px; }"
         "QToolButton:hover { background: #22324a; border-color: #314968; }"
         "QToolButton:pressed, QToolButton:checked { background: #2b4d7d; color: #ffffff; }"
