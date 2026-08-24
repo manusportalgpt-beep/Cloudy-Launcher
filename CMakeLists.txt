@@ -277,6 +277,11 @@ set(Launcher_MSA_CLIENT_ID "c36a9fb6-4f2a-41ff-90bd-ae7cc92031eb" CACHE STRING "
 # This key was issued specifically for Prism Launcher
 set(Launcher_CURSEFORGE_API_KEY "" CACHE STRING "API key for the CurseForge platform")
 
+# Keep credentials out of source control. CI/local builds may provide this securely.
+if(DEFINED ENV{CURSEFORGE_API_KEY} AND NOT "$ENV{CURSEFORGE_API_KEY}" STREQUAL "")
+    set(Launcher_CURSEFORGE_API_KEY "$ENV{CURSEFORGE_API_KEY}" CACHE STRING "API key for the CurseForge platform" FORCE)
+endif()
+
 set(Launcher_COMPILER_NAME ${CMAKE_CXX_COMPILER_ID})
 set(Launcher_COMPILER_VERSION ${CMAKE_CXX_COMPILER_VERSION})
 set(Launcher_COMPILER_TARGET_SYSTEM ${CMAKE_SYSTEM_NAME})
