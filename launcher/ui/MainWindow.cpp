@@ -159,7 +159,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     setCentralWidget(m_contentStack);
 
     setWindowIcon(APPLICATION->logo());
-    setWindowTitle(APPLICATION->applicationDisplayName());
+    setWindowTitle(QStringLiteral("Cloudy Launcher"));
 
     // Cloudy Launcher foundation: calm hierarchy, compact controls, and purposeful contrast.
     // Keep the existing widgets and backend connections; this layer changes presentation only.

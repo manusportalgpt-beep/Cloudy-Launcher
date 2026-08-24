@@ -118,7 +118,8 @@ void SkinOpenGLWindow::initializeGL()
 {
     initializeOpenGLFunctions();
 
-    glClearColor(0, 0, 1, 1);
+    // Match the Cloudy surface instead of flashing a blue frame during initialization.
+    glClearColor(0.051f, 0.082f, 0.137f, 1.0f);
 
     initShaders();
 
