@@ -38,9 +38,12 @@
 #include "ui/dialogs/skins/SkinManageDialog.h"
 #include "ui_AccountListPage.h"
 
+#include <QHBoxLayout>
 #include <QItemSelectionModel>
+#include <QLabel>
 #include <QMenu>
 #include <QPushButton>
+#include <QVBoxLayout>
 
 #include <QDebug>
 
@@ -53,13 +56,38 @@
 AccountListPage::AccountListPage(QWidget* parent) : QMainWindow(parent), ui(new Ui::AccountListPage)
 {
     ui->setupUi(this);
+    ui->centralwidget->setObjectName(QStringLiteral("cloudySettingsContent"));
+    ui->toolBar->setObjectName(QStringLiteral("cloudyAccountActions"));
+    ui->listView->setObjectName(QStringLiteral("cloudyAccountList"));
+    ui->actionAddMicrosoft->setText(tr("Add Microsoft account"));
+    ui->actionAddOffline->setText(tr("Add local profile"));
     ui->listView->setEmptyString(
-        tr("Welcome!\n"
-           "If you're new here, you can select the \"Add Microsoft\" button to link your Microsoft account."));
+        tr("No profiles yet\n"
+           "Sign in with Microsoft for licensed play, or add a local nickname profile for offline worlds."));
     ui->listView->setEmptyMode(VersionListView::String);
     ui->listView->setContextMenuPolicy(Qt::CustomContextMenu);
 
     m_accounts = APPLICATION->accounts();
+
+    auto* accountSurface = new QWidget(ui->centralwidget);
+    accountSurface->setObjectName(QStringLiteral("cloudyAccountSurface"));
+    auto* accountLayout = new QVBoxLayout(accountSurface);
+    accountLayout->setContentsMargins(20, 18, 20, 18);
+    accountLayout->setSpacing(8);
+    auto* accountTitle = new QLabel(tr("Profiles"), accountSurface);
+    accountTitle->setObjectName(QStringLiteral("cloudySettingsTitle"));
+    auto* accountSubtitle = new QLabel(
+        tr("Use Microsoft OAuth for licensed accounts. Local profiles are nickname-only and never authenticate with Minecraft services."),
+        accountSurface);
+    accountSubtitle->setObjectName(QStringLiteral("cloudySettingsSubtitle"));
+    accountSubtitle->setWordWrap(true);
+    accountLayout->addWidget(accountTitle);
+    accountLayout->addWidget(accountSubtitle);
+    accountLayout->addSpacing(6);
+    ui->horizontalLayout->removeWidget(ui->listView);
+    ui->listView->setParent(accountSurface);
+    accountLayout->addWidget(ui->listView, 1);
+    ui->horizontalLayout->addWidget(accountSurface);
 
     ui->listView->setModel(m_accounts);
     ui->listView->header()->setSectionResizeMode(AccountList::VListColumns::ProfileNameColumn, QHeaderView::Stretch);
@@ -140,15 +168,10 @@ void AccountListPage::on_actionAddMicrosoft_triggered()
 
 void AccountListPage::on_actionAddOffline_triggered()
 {
-    if (!m_accounts->anyAccountIsValid()) {
-        QMessageBox::warning(this, tr("Error"),
-                             tr("You must add a Microsoft account that owns Minecraft before you can add an offline account."
-                                "<br><br>"
-                                "If you have lost your account you can contact Microsoft for support."));
-        return;
-    }
-
-    ChooseOfflineNameDialog dialog(tr("Please enter your desired username to add your offline account."), this);
+    ChooseOfflineNameDialog dialog(
+        tr("Choose a nickname for a local profile.\n\n"
+           "This does not sign in to Minecraft services, grant a license, or enable official online play. It is intended for local/offline worlds."),
+        this);
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }

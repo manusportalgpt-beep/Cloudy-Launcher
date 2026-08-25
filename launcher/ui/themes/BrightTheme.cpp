@@ -36,6 +36,8 @@
 
 #include <QObject>
 
+#include "CloudyStyle.h"
+
 QString BrightTheme::id()
 {
     return "bright";
@@ -82,7 +84,7 @@ bool BrightTheme::hasStyleSheet()
 
 QString BrightTheme::appStyleSheet()
 {
-    return QString();
+    return CloudyStyle::applicationStyleSheet();
 }
 QString BrightTheme::tooltip()
 {

@@ -37,6 +37,8 @@
 
 #include <QObject>
 
+#include "CloudyStyle.h"
+
 QString DarkTheme::id()
 {
     return "dark";
@@ -84,7 +86,8 @@ bool DarkTheme::hasStyleSheet()
 
 QString DarkTheme::appStyleSheet()
 {
-    return "QToolTip { color: #ffffff; background-color: #2a82da; border: 1px solid white; }";
+    return QStringLiteral("QToolTip { color: #ffffff; background-color: #2a82da; border: 1px solid white; }")
+           + CloudyStyle::applicationStyleSheet();
 }
 
 QString DarkTheme::tooltip()

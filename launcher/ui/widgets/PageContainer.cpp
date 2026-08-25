@@ -81,6 +81,7 @@ PageContainer::PageContainer(BasePageProvider* pageProvider, QString defaultId, 
     , m_proxyModel(new PageEntryFilterModel(this))
     , m_model(new PageModel(this))
 {
+    setObjectName(QStringLiteral("cloudySettingsShell"));
     createUI();
     useSidebarStyle(true);
 
@@ -165,7 +166,11 @@ void PageContainer::createUI()
 {
     m_pageStack = new QStackedLayout;
     m_pageList = new PageView;
+    m_pageList->setObjectName(QStringLiteral("cloudySettingsNav"));
+    m_pageList->setSpacing(2);
+    m_pageList->setUniformItemSizes(true);
     m_header = new QLabel();
+    m_header->setObjectName(QStringLiteral("cloudySettingsPageTitle"));
 
     QFont headerLabelFont = m_header->font();
     headerLabelFont.setBold(true);
@@ -175,17 +180,27 @@ void PageContainer::createUI()
     }
     m_header->setFont(headerLabelFont);
 
-    auto* headerHLayout = new QHBoxLayout;
+    auto* headerWidget = new QWidget(this);
+    headerWidget->setObjectName(QStringLiteral("cloudySettingsHeader"));
+    auto* headerLayout = new QVBoxLayout(headerWidget);
     const int leftMargin = APPLICATION->style()->pixelMetric(QStyle::PM_LayoutLeftMargin);
-    headerHLayout->addSpacerItem(new QSpacerItem(leftMargin, 0, QSizePolicy::Fixed, QSizePolicy::Ignored));
-    headerHLayout->addWidget(m_header);
-    headerHLayout->setContentsMargins(0, 6, 0, 0);
+    headerLayout->setContentsMargins(leftMargin, 14, leftMargin, 10);
+    headerLayout->setSpacing(2);
 
-    m_pageStack->setContentsMargins(0, 0, 0, 0);
+    auto* title = new QLabel(tr("Cloudy workspace"), headerWidget);
+    title->setObjectName(QStringLiteral("cloudySettingsTitle"));
+    auto* subtitle = new QLabel(tr("Focused controls, kept inside the launcher"), headerWidget);
+    subtitle->setObjectName(QStringLiteral("cloudySettingsSubtitle"));
+    headerLayout->addWidget(title);
+    headerLayout->addWidget(subtitle);
+    headerLayout->addSpacing(7);
+    headerLayout->addWidget(m_header);
+
+    m_pageStack->setContentsMargins(leftMargin, 0, leftMargin, 0);
     m_pageStack->addWidget(new QWidget(this));
 
     m_layout = new QGridLayout;
-    m_layout->addLayout(headerHLayout, 0, 1, 1, 1);
+    m_layout->addWidget(headerWidget, 0, 1, 1, 1);
     m_layout->addWidget(m_pageList, 0, 0, 3, 1);
     m_layout->addLayout(m_pageStack, 1, 1, 1, 1);
     m_layout->setColumnStretch(1, 4);

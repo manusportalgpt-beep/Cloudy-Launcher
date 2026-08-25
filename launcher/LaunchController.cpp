@@ -137,6 +137,13 @@ LaunchDecision LaunchController::decideLaunchMode()
     const auto* accounts = APPLICATION->accounts();
     MinecraftAccountPtr accountToCheck = nullptr;
 
+    // A local nickname profile is intentionally limited to the explicit offline mode.
+    // It must never be promoted to a licensed/online session.
+    if (m_accountToUse->accountType() == AccountType::Offline && m_wantedLaunchMode == LaunchMode::Offline) {
+        m_actualLaunchMode = LaunchMode::Offline;
+        return LaunchDecision::Continue;
+    }
+
     if (m_accountToUse->accountType() != AccountType::Offline) {
         accountToCheck = m_accountToUse->ownsMinecraft() ? m_accountToUse : nullptr;
     } else if (const auto defaultAccount = accounts->defaultAccount(); defaultAccount && defaultAccount->ownsMinecraft()) {

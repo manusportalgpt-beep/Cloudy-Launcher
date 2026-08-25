@@ -56,6 +56,7 @@
 #include <QApplication>
 #include <QButtonGroup>
 #include <QFileDialog>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QHeaderView>
@@ -161,42 +162,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     setWindowIcon(APPLICATION->logo());
     setWindowTitle(QStringLiteral("Cloudy Launcher"));
 
-    // Cloudy Launcher foundation: calm hierarchy, compact controls, and purposeful contrast.
-    // Keep the existing widgets and backend connections; this layer changes presentation only.
+    // Cloudy component styling is installed by the selected built-in theme.
+    // Keep this window stylesheet-free so user-provided Prism QSS/CSS stays authoritative.
     setMinimumSize(QSize(980, 620));
-    setStyleSheet(QStringLiteral(
-        "QMainWindow { background: #111827; }"
-        "QWidget#centralWidget { background: #111827; }"
-        "QToolBar#mainToolBar { background: #172033; border: 0; border-bottom: 1px solid #26344b; padding: 8px 12px; spacing: 6px; }"
-        "QToolBar#instanceToolBar { background: #131d2e; border: 0; border-left: 1px solid #26344b; padding: 14px 10px; spacing: 6px; }"
-        "QToolBar#instanceToolBar QToolButton { min-width: 154px; text-align: left; }"
-        "QToolBar#cloudySidebar { background: #0d1523; border: 0; border-right: 1px solid #26344b; padding: 12px 10px; spacing: 4px; }"
-        "QToolBar#cloudySidebar QToolButton { min-height: 34px; min-width: 156px; text-align: left; padding: 7px 12px; border-radius: 7px; }"
-        "QToolBar#cloudySidebar QToolButton:hover { background: #172a43; }"
-        "QToolBar#cloudySidebar QToolButton:pressed { background: #244a78; }"
-        "QToolBar#cloudySidebar::separator { height: 1px; background: #26344b; margin: 10px 6px; }"
-        "QToolBar#cloudyNotch { background: #172033; border: 0; border-bottom: 1px solid #26344b; padding: 5px 12px; spacing: 4px; }"
-        "QToolBar#cloudyNotch QToolButton { min-height: 30px; padding: 5px 10px; border-radius: 6px; }"
-        "QToolBar#cloudyNotch QToolButton:hover { background: #22324a; }"
-        "QToolBar#cloudyNotch QToolButton:pressed, QToolBar#cloudyNotch QToolButton:checked { background: #2b4d7d; color: #ffffff; }"
-        "QLabel#cloudyBrandName { color: #f2f7ff; font-size: 15px; font-weight: 600; }"
-        "QWidget#librarySurface { background: #111b2b; }"
-        "QLabel#libraryTitle { color: #f3f7fc; font-size: 25px; font-weight: 600; }"
-        "QLabel#librarySubtitle { color: #91a4bb; font-size: 13px; }"
-        "QLineEdit#librarySearch { background: #17263a; color: #e7f0fb; border: 1px solid #2b405d; border-radius: 9px; padding: 9px 13px; min-width: 250px; }"
-        "QLineEdit#librarySearch:focus { border-color: #5e9bd6; }"
-        "QToolButton#libraryCreateButton { background: #5e9bd6; color: #08111f; border: 0; border-radius: 9px; padding: 10px 16px; font-weight: 600; }"
-        "QToolButton#libraryCreateButton:hover { background: #78b1e5; }"
-        "QToolButton#libraryCreateButton:pressed { background: #477fae; color: #f3f7fc; }"
-        "QToolButton { color: #d8e4f2; border: 1px solid transparent; border-radius: 6px; padding: 7px 9px; }"
-        "QToolButton:hover { background: #22324a; border-color: #314968; }"
-        "QToolButton:pressed, QToolButton:checked { background: #2b4d7d; color: #ffffff; }"
-        "QLabel { color: #d8e4f2; }"
-        "QStatusBar { background: #0d1523; color: #9fb1c8; border-top: 1px solid #26344b; }"
-        "QMenuBar { background: #111827; color: #c9d7e8; }"
-        "QMenuBar::item:selected, QMenu::item:selected { background: #2b4d7d; }"
-        "QMenu { background: #172033; color: #d8e4f2; border: 1px solid #31415a; }"
-    ));
     ui->mainToolBar->setMovable(false);
     // Selected-instance actions read as a details rail, not a second navigation column.
     removeToolBar(ui->instanceToolBar);
@@ -280,6 +248,35 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         // See https://github.com/PolyMC/PolyMC/issues/493
         connect(ui->instanceToolBar, &QToolBar::orientationChanged, this,
                 [this](Qt::Orientation) { ui->instanceToolBar->setOrientation(Qt::Vertical); });
+
+        // The right rail starts with a compact live summary, then reuses the existing actions.
+        auto* instanceDetails = new QFrame(this);
+        instanceDetails->setObjectName(QStringLiteral("cloudyInstanceDetails"));
+        instanceDetails->setMinimumWidth(190);
+        auto* instanceDetailsLayout = new QHBoxLayout(instanceDetails);
+        instanceDetailsLayout->setContentsMargins(8, 8, 8, 8);
+        instanceDetailsLayout->setSpacing(9);
+
+        m_instanceIcon = new QLabel(instanceDetails);
+        m_instanceIcon->setObjectName(QStringLiteral("cloudyInstanceIcon"));
+        m_instanceIcon->setFixedSize(QSize(58, 58));
+        m_instanceIcon->setAlignment(Qt::AlignCenter);
+
+        auto* instanceText = new QVBoxLayout();
+        instanceText->setSpacing(2);
+        m_instanceTitle = new QLabel(tr("No instance selected"), instanceDetails);
+        m_instanceTitle->setObjectName(QStringLiteral("cloudyInstanceTitle"));
+        m_instanceTitle->setWordWrap(true);
+        m_instanceMeta = new QLabel(tr("Choose an instance from your library"), instanceDetails);
+        m_instanceMeta->setObjectName(QStringLiteral("cloudyInstanceMeta"));
+        m_instanceMeta->setWordWrap(true);
+        instanceText->addWidget(m_instanceTitle);
+        instanceText->addWidget(m_instanceMeta);
+        instanceText->addStretch(1);
+        instanceDetailsLayout->addWidget(m_instanceIcon);
+        instanceDetailsLayout->addLayout(instanceText, 1);
+        ui->instanceToolBar->addWidget(instanceDetails);
+        ui->instanceToolBar->addSeparator();
 
         // if you try to add a widget to a toolbar in a .ui file
         // qt designer will delete it when you save the file >:(
@@ -1429,6 +1426,9 @@ void MainWindow::updateInstanceToolIcon(QString new_icon)
     auto icon = APPLICATION->icons()->getIcon(m_currentInstIcon);
     ui->actionChangeInstIcon->setIcon(icon);
     changeIconButton->setIcon(icon);
+    if (m_instanceIcon) {
+        m_instanceIcon->setPixmap(icon.pixmap(QSize(42, 42)));
+    }
 }
 
 void MainWindow::setSelectedInstanceById(const QString& id)
@@ -1893,6 +1893,12 @@ void MainWindow::instanceChanged(const QModelIndex& current, [[maybe_unused]] co
         ui->actionExportInstance->setEnabled(m_selectedInstance->canExport());
         renameButton->setText(m_selectedInstance->name());
         m_statusLeft->setText(m_selectedInstance->getStatusbarDescription());
+        if (m_instanceTitle) {
+            m_instanceTitle->setText(m_selectedInstance->name());
+            m_instanceMeta->setText(QStringLiteral("%1\n%2")
+                                        .arg(m_selectedInstance->isRunning() ? tr("Running") : tr("Ready"),
+                                             m_selectedInstance->getStatusbarDescription()));
+        }
         updateStatusCenter();
         updateInstanceToolIcon(m_selectedInstance->iconKey());
 
@@ -1934,6 +1940,10 @@ void MainWindow::selectionBad()
     setInstanceActionsEnabled(false);
     updateLaunchButton();
     renameButton->setText(tr("Rename Instance"));
+    if (m_instanceTitle) {
+        m_instanceTitle->setText(tr("No instance selected"));
+        m_instanceMeta->setText(tr("Choose an instance from your library"));
+    }
     updateInstanceToolIcon("grass");
 
     // ...and then see if we can enable the previously selected instance

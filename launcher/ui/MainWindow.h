@@ -249,6 +249,9 @@ class MainWindow : public QMainWindow {
     QToolButton* newsLabel = nullptr;
     QLabel* m_statusLeft = nullptr;
     QLabel* m_statusCenter = nullptr;
+    QLabel* m_instanceIcon = nullptr;
+    QLabel* m_instanceTitle = nullptr;
+    QLabel* m_instanceMeta = nullptr;
     LabeledToolButton* changeIconButton = nullptr;
     LabeledToolButton* renameButton = nullptr;
     QToolButton* helpMenuButton = nullptr;

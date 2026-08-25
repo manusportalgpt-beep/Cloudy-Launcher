@@ -1,0 +1,78 @@
+// SPDX-License-Identifier: GPL-3.0-only
+/*
+ * Cloudy Launcher UI additions.
+ * This file is part of an independent Prism Launcher fork.
+ */
+#include "CloudyStyle.h"
+
+namespace CloudyStyle {
+
+QString applicationStyleSheet()
+{
+    return QStringLiteral(
+        "QWidget#cloudySettingsShell, QWidget#cloudySettingsContent, QWidget#cloudyAccountSurface { background: palette(window); }"
+        "QMainWindow, QDialog { background: palette(window); color: palette(windowtext); }"
+        "QPushButton, QToolButton { min-height: 28px; padding: 5px 10px; border: 1px solid palette(mid); border-radius: 6px; background: palette(button); color: palette(button-text); }"
+        "QPushButton:hover, QToolButton:hover { background: palette(alternate-base); }"
+        "QPushButton:pressed, QToolButton:pressed { background: palette(mid); }"
+        "QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QDateEdit, QTimeEdit, QTextEdit, QPlainTextEdit { min-height: 28px; padding: 5px 8px; border: 1px solid palette(mid); border-radius: 6px; background: palette(base); color: palette(text); selection-background-color: palette(highlight); selection-color: palette(highlighted-text); }"
+        "QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus, QDateEdit:focus, QTimeEdit:focus, QTextEdit:focus, QPlainTextEdit:focus { border: 2px solid palette(highlight); padding: 4px 7px; }"
+        "QGroupBox { margin-top: 12px; padding: 14px 10px 10px 10px; border: 1px solid palette(mid); border-radius: 8px; }"
+        "QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; color: palette(windowtext); font-weight: 600; }"
+        "QTreeView, QListView, QTableView { background: palette(base); alternate-background-color: palette(alternate-base); border: 1px solid palette(mid); border-radius: 8px; }"
+        "QHeaderView::section { padding: 7px 9px; border: 0; border-bottom: 1px solid palette(mid); background: palette(alternate-base); color: palette(windowtext); font-weight: 600; }"
+        "QToolBar#cloudyAccountActions { background: palette(alternate-base); border: 0; border-left: 1px solid palette(mid); padding: 8px 6px; spacing: 4px; }"
+        "QWidget#cloudyAccountSurface { padding: 0; }"
+        "QWidget#cloudySettingsHeader { background: palette(window); }"
+        "QLabel#cloudySettingsTitle { color: palette(windowtext); font-size: 18px; font-weight: 600; }"
+        "QLabel#cloudySettingsSubtitle { color: palette(mid); font-size: 11px; }"
+        "QLabel#cloudySettingsPageTitle { color: palette(windowtext); font-size: 14px; font-weight: 600; }"
+        "QListView#cloudySettingsNav { background: palette(alternate-base); border: 0; border-right: 1px solid palette(mid); padding: 10px 6px; }"
+        "QListView#cloudySettingsNav::item { min-height: 34px; padding: 7px 10px; border-radius: 6px; }"
+        "QListView#cloudySettingsNav::item:hover { background: palette(button); }"
+        "QListView#cloudySettingsNav::item:selected { background: palette(highlight); color: palette(highlighted-text); }"
+        "QToolBar#instanceToolBar { background: palette(alternate-base); border: 0; border-left: 1px solid palette(mid); padding: 8px 6px; spacing: 4px; }"
+        "QToolBar#instanceToolBar QToolButton { min-width: 154px; text-align: left; }"
+        "QFrame#cloudyInstanceDetails { background: palette(alternate-base); border: 0; }"
+        "QLabel#cloudyInstanceTitle { color: palette(windowtext); font-size: 17px; font-weight: 600; }"
+        "QLabel#cloudyInstanceMeta { color: palette(mid); font-size: 11px; }"
+        "QLabel#cloudyInstanceIcon { background: palette(base); border: 1px solid palette(mid); border-radius: 8px; padding: 6px; }"
+        "QFrame#cloudySection { background: palette(base); border: 1px solid palette(mid); border-radius: 8px; }"
+        "QGroupBox#cloudySection { margin-top: 12px; padding: 14px 10px 10px 10px; border: 1px solid palette(mid); border-radius: 8px; }"
+        "QGroupBox#cloudySection::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; color: palette(windowtext); font-weight: 600; }"
+        "QPushButton#cloudyPrimaryButton, QToolButton#cloudyPrimaryButton { background: palette(highlight); color: palette(highlighted-text); border: 1px solid palette(highlight); border-radius: 6px; padding: 8px 14px; font-weight: 600; }"
+        "QPushButton#cloudyPrimaryButton:hover, QToolButton#cloudyPrimaryButton:hover { background: palette(highlight); border-color: palette(highlight); }"
+        "QLineEdit#cloudySearch, QComboBox#cloudyCombo { background: palette(base); border: 1px solid palette(mid); border-radius: 6px; padding: 7px 9px; }"
+        "QLineEdit#cloudySearch:focus, QComboBox#cloudyCombo:focus { border: 2px solid palette(highlight); padding: 6px 8px; }"
+        "QScrollArea#cloudyScrollArea { border: 0; background: transparent; }"
+        "QTabWidget#cloudyTabs::pane { border: 1px solid palette(mid); border-radius: 6px; top: -1px; }"
+        "QTabBar#cloudyTabs::tab { padding: 8px 12px; border: 0; }"
+        "QTabBar#cloudyTabs::tab:selected { border-bottom: 2px solid palette(highlight); }"
+        "QProgressBar#cloudyProgress { min-height: 6px; max-height: 6px; border: 0; border-radius: 3px; background: palette(alternate-base); text-align: center; }"
+        "QProgressBar#cloudyProgress::chunk { border-radius: 3px; background: palette(highlight); }"
+        "QToolBar#cloudySidebar { background: palette(alternate-base); border: 0; border-right: 1px solid palette(mid); padding: 10px 8px; spacing: 4px; }"
+        "QToolBar#cloudySidebar QToolButton { min-height: 34px; min-width: 154px; padding: 7px 10px; border-radius: 6px; text-align: left; }"
+        "QToolBar#cloudySidebar QToolButton:hover { background: palette(button); }"
+        "QToolBar#cloudySidebar QToolButton:checked, QToolBar#cloudySidebar QToolButton:pressed { background: palette(highlight); color: palette(highlighted-text); }"
+        "QToolBar#cloudySidebar::separator { height: 1px; background: palette(mid); margin: 10px 6px; }"
+        "QToolBar#cloudyNotch { background: palette(alternate-base); border: 0; border-bottom: 1px solid palette(mid); padding: 4px 10px; spacing: 4px; }"
+        "QToolBar#cloudyNotch QToolButton { min-height: 30px; padding: 5px 10px; border-radius: 6px; }"
+        "QToolBar#cloudyNotch QToolButton:hover { background: palette(button); }"
+        "QToolBar#cloudyNotch QToolButton:checked, QToolBar#cloudyNotch QToolButton:pressed { background: palette(highlight); color: palette(highlighted-text); }"
+        "QLabel#cloudyBrandName { color: palette(windowtext); font-size: 14px; font-weight: 600; }"
+        "QLabel#cloudyBrandCaption { color: palette(mid); font-size: 10px; }"
+        "QFrame#cloudyAccountCard { background: palette(base); border: 1px solid palette(mid); border-radius: 8px; }"
+        "QListView#cloudyAccountList { background: palette(base); border: 0; padding: 6px; }"
+        "QListView#cloudyAccountList::item { padding: 9px 10px; border-radius: 6px; }"
+        "QListView#cloudyAccountList::item:hover { background: palette(alternate-base); }"
+        "QListView#cloudyAccountList::item:selected { background: palette(highlight); color: palette(highlighted-text); }"
+        "QDialog#cloudyDialog { background: palette(window); }"
+        "QDialog#cloudyDialog QGroupBox { border: 1px solid palette(mid); border-radius: 8px; margin-top: 10px; padding: 12px 10px 10px 10px; }"
+        "QDialog#cloudyDialog QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; font-weight: 600; }"
+        "QDialog#cloudyDialog QPushButton { min-height: 30px; padding: 5px 12px; border-radius: 6px; }"
+        "QDialog#cloudyDialog QListView { background: palette(base); border: 1px solid palette(mid); border-radius: 8px; padding: 6px; }"
+        "QDialog#cloudyDialog QLineEdit, QDialog#cloudyDialog QComboBox { background: palette(base); border: 1px solid palette(mid); border-radius: 6px; padding: 7px 9px; }"
+        "QDialog#cloudyDialog QLineEdit:focus, QDialog#cloudyDialog QComboBox:focus { border: 2px solid palette(highlight); padding: 6px 8px; }");
+}
+
+}  // namespace CloudyStyle

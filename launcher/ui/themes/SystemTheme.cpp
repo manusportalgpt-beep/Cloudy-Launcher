@@ -39,6 +39,7 @@
 #include <QStyleFactory>
 #include "HintOverrideProxyStyle.h"
 #include "ThemeManager.h"
+#include "CloudyStyle.h"
 
 // See https://github.com/MultiMC/Launcher/issues/1790
 // or https://github.com/PrismLauncher/PrismLauncher/issues/490
@@ -64,6 +65,7 @@ void SystemTheme::apply(bool initial)
     // See S_NATIVE_STYLES comment
     if (initial && S_NATIVE_STYLES.contains(m_themeName)) {
         QApplication::setStyle(new HintOverrideProxyStyle(QStyleFactory::create(qtTheme())));
+        qApp->setStyleSheet(CloudyStyle::applicationStyleSheet());
         return;
     }
 
@@ -119,7 +121,7 @@ QPalette SystemTheme::colorScheme()
 
 QString SystemTheme::appStyleSheet()
 {
-    return QString();
+    return CloudyStyle::applicationStyleSheet();
 }
 
 double SystemTheme::fadeAmount()

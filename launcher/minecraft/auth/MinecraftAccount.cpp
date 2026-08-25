@@ -194,7 +194,7 @@ void MinecraftAccount::authFailed(QString reason)
 QString MinecraftAccount::displayName() const
 {
     if (const QList validStates{ AccountState::Unchecked, AccountState::Working, AccountState::Offline, AccountState::Online }; !validStates.contains(accountState())) {
-        return QString("⚠ %1").arg(profileName());
+        return QString("%1 (needs attention)").arg(profileName());
     }
     return profileName();
 }
