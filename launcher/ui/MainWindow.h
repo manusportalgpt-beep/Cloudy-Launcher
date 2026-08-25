@@ -52,6 +52,8 @@ class LaunchController;
 class NewsChecker;
 class QToolButton;
 class QToolBar;
+class QFrame;
+class QButtonGroup;
 class QAction;
 class QStackedWidget;
 class InstanceProxyModel;
@@ -237,6 +239,7 @@ class MainWindow : public QMainWindow {
     void setSelectedInstanceById(const QString& id);
     void updateStatusCenter();
     void setInstanceActionsEnabled(bool enabled);
+    void setWorkspaceContext(const QString& title, const QString& subtitle, const QString& activeSection = {});
 
     void runModalTask(Task* task);
     void instanceFromInstanceTask(InstanceTask* task);
@@ -252,6 +255,12 @@ class MainWindow : public QMainWindow {
     QLabel* m_instanceIcon = nullptr;
     QLabel* m_instanceTitle = nullptr;
     QLabel* m_instanceMeta = nullptr;
+    QLabel* m_workspaceTitle = nullptr;
+    QLabel* m_workspaceSubtitle = nullptr;
+    QWidget* m_cloudyWorkspace = nullptr;
+    QWidget* m_cloudyHeader = nullptr;
+    QWidget* m_cloudyDetail = nullptr;
+    QWidget* m_cloudyFooter = nullptr;
     LabeledToolButton* changeIconButton = nullptr;
     LabeledToolButton* renameButton = nullptr;
     QToolButton* helpMenuButton = nullptr;
@@ -267,7 +276,9 @@ class MainWindow : public QMainWindow {
     // managed by the application object
     Task* m_versionLoadTask = nullptr;
     QStackedWidget* m_contentStack = nullptr;
-    QToolBar* m_cloudySidebar = nullptr;
+    QFrame* m_cloudySidebar = nullptr;
     QToolBar* m_cloudyNotch = nullptr;
+    QButtonGroup* m_cloudyNavGroup = nullptr;
+    QToolButton* m_libraryNavButton = nullptr;
     QAction* m_toggleCloudyNavigation = nullptr;
 };

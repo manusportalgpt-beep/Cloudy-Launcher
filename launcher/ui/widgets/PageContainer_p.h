@@ -86,17 +86,21 @@ class PageView : public QListView {
    public:
     PageView(QWidget* parent = 0) : QListView(parent)
     {
-        setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Expanding);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         setItemDelegate(new PageViewDelegate(this));
-        setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        setViewMode(QListView::ListMode);
+        setFlow(QListView::LeftToRight);
+        setWrapping(false);
+        setMovement(QListView::Static);
+        setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        setFixedHeight(52);
+        setSpacing(4);
     }
 
     virtual QSize sizeHint() const
     {
-        int width = sizeHintForColumn(0) + frameWidth() * 2 + 5;
-        if (verticalScrollBar()->isVisible())
-            width += verticalScrollBar()->width();
-        return QSize(width, 100);
+        return QSize(360, 52);
     }
 
     virtual bool eventFilter(QObject* obj, QEvent* event)
