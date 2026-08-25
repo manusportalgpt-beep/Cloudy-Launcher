@@ -22,8 +22,8 @@ QString applicationStyleSheet()
         "QToolButton#cloudyHeaderPrimary:hover, QToolButton#cloudyHeaderButton:hover, QToolButton#cloudyAccountButton:hover { background: palette(alternate-base); }"
         "QToolButton#cloudyHeaderPrimary:hover { background: palette(highlight); }"
         "QWidget#cloudyWorkspaceBody { background: palette(window); }"
-        "QFrame#cloudyWorkspaceNav, QFrame#cloudyDetailCanvas { background: palette(base); border: 1px solid palette(mid); border-radius: 16px; }"
-        "QFrame#cloudyWorkspaceNav { padding: 0; }"
+        "QFrame#cloudyWorkspaceNav { background: transparent; border: 0; border-right: 1px solid palette(mid); border-radius: 0; }"
+        "QFrame#cloudyDetailCanvas { background: transparent; border: 0; border-left: 1px solid palette(mid); border-radius: 0; }"
         "QToolButton#cloudyNavLibrary, QToolButton#cloudyNavAdd, QToolButton#cloudyNavAccounts, QToolButton#cloudyNavSettings, QToolButton#cloudyNavSkins { min-height: 42px; padding: 9px 12px; border: 1px solid transparent; border-radius: 11px; background: transparent; color: palette(windowtext); text-align: left; }"
         "QToolButton#cloudyNavLibrary:hover, QToolButton#cloudyNavAdd:hover, QToolButton#cloudyNavAccounts:hover, QToolButton#cloudyNavSettings:hover, QToolButton#cloudyNavSkins:hover { background: palette(alternate-base); border-color: palette(mid); }"
         "QToolButton#cloudyNavLibrary:checked, QToolButton#cloudyNavAdd:checked, QToolButton#cloudyNavAccounts:checked, QToolButton#cloudyNavSettings:checked, QToolButton#cloudyNavSkins:checked { background: palette(highlight); border-color: palette(highlight); color: palette(highlighted-text); font-weight: 600; }"
@@ -48,9 +48,10 @@ QString applicationStyleSheet()
         "QLabel#cloudyInstanceTitle { color: palette(windowtext); font-size: 17px; font-weight: 700; }"
         "QLabel#cloudyInstanceMeta { color: palette(mid); font-size: 11px; }"
         "QFrame#cloudyDetailSeparator { color: palette(mid); background: palette(mid); min-height: 1px; max-height: 1px; }"
-        "QToolButton#cloudyDetailPrimary, QToolButton#cloudyDetailButton, QToolButton#cloudyDetailDanger { min-height: 38px; padding: 9px 12px; border: 1px solid palette(mid); border-radius: 10px; background: palette(base); color: palette(button-text); text-align: left; }"
+        "QToolButton#cloudyDetailPrimary, QToolButton#cloudyDetailButton, QToolButton#cloudyDetailDanger { min-height: 32px; padding: 7px 10px; border: 0; border-radius: 8px; background: transparent; color: palette(button-text); text-align: left; }"
         "QToolButton#cloudyDetailPrimary { background: palette(highlight); border-color: palette(highlight); color: palette(highlighted-text); font-weight: 700; }"
         "QToolButton#cloudyDetailPrimary:hover, QToolButton#cloudyDetailButton:hover, QToolButton#cloudyDetailDanger:hover { background: palette(alternate-base); }"
+        "QToolButton#cloudyDetailDanger { color: palette(windowtext); }"
         "QToolButton#cloudyDetailPrimary:hover { background: palette(highlight); }"
         // Shared settings/account/editor language.
         "QMainWindow, QDialog { background: palette(window); color: palette(windowtext); }"
@@ -85,6 +86,10 @@ QString applicationStyleSheet()
         "QListView#cloudyAccountList::item:selected { background: palette(highlight); color: palette(highlighted-text); }"
         "QDialog#cloudyDialog { background: palette(window); }"
         "QDialog#cloudyDialog QGroupBox { border: 1px solid palette(mid); border-radius: 12px; margin-top: 10px; padding: 12px 10px 10px 10px; }"
+        "QWidget#cloudyEmbeddedPage { background: palette(window); border: 0; }"
+        "QFrame#cloudyLoadingPage { background: palette(window); }"
+        "QLabel#cloudyLoadingTitle { color: palette(windowtext); font-size: 18px; font-weight: 600; }"
+        "QLabel#cloudyLoadingSubtitle { color: palette(mid); font-size: 12px; }"
         "QDialog#cloudyDialog QListView { background: palette(base); border: 1px solid palette(mid); border-radius: 11px; padding: 6px; }");
 }
 

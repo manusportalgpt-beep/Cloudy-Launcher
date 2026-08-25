@@ -492,18 +492,17 @@ void InstanceView::paintEvent([[maybe_unused]] QPaintEvent* event)
             return;
         }
 
-        QColor tileBackground = palette().color(QPalette::Base);
-        tileBackground.setAlpha(245);
-        const QColor border = palette().color(QPalette::Mid);
         const QColor foreground = palette().color(QPalette::WindowText);
         const QColor secondary = palette().color(QPalette::Mid);
-        painter.setBrush(tileBackground);
-        painter.setPen(QPen(border, 1));
-        painter.drawRoundedRect(tile, 9.0, 9.0);
+        painter.setBrush(Qt::NoBrush);
+        QPen border(palette().color(QPalette::Mid), 1);
+        border.setStyle(Qt::DashLine);
+        painter.setPen(border);
+        painter.drawRoundedRect(tile, 12.0, 12.0);
 
         const QPoint center(tile.center().x(), tile.top() + 38);
         QPen plusPen(palette().color(QPalette::Highlight));
-        plusPen.setWidth(3);
+        plusPen.setWidth(2);
         plusPen.setCapStyle(Qt::RoundCap);
         painter.setPen(plusPen);
         painter.drawLine(center.x() - 12, center.y(), center.x() + 12, center.y());

@@ -58,29 +58,39 @@
 #include "ui/dialogs/ProgressDialog.h"
 #include "ui/instanceview/InstanceDelegate.h"
 
-SkinManageDialog::SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct)
-    : QDialog(parent), m_acct(acct), m_ui(new Ui::SkinManageDialog), m_list(this, APPLICATION->settings()->get("SkinsDir").toString(), acct)
+SkinManageDialog::SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct, bool embedded)
+    : QDialog(parent), m_acct(acct), m_embedded(embedded), m_ui(new Ui::SkinManageDialog), m_list(this, APPLICATION->settings()->get("SkinsDir").toString(), acct)
 {
+    if (m_embedded) {
+        setWindowFlags(Qt::Widget);
+        setWindowModality(Qt::NonModal);
+        setAttribute(Qt::WA_DeleteOnClose, false);
+    } else {
+        setWindowModality(Qt::WindowModal);
+    }
+
     m_ui->setupUi(this);
     setObjectName(QStringLiteral("cloudyDialog"));
     m_ui->listView->setObjectName(QStringLiteral("cloudySkinLibrary"));
     m_ui->modelBox->setObjectName(QStringLiteral("cloudySection"));
     m_ui->capeBox->setObjectName(QStringLiteral("cloudySection"));
 
-    auto* studioHeader = new QFrame(this);
-    studioHeader->setObjectName(QStringLiteral("cloudyDialogHeader"));
-    auto* studioHeaderLayout = new QVBoxLayout(studioHeader);
-    studioHeaderLayout->setContentsMargins(4, 2, 4, 10);
-    studioHeaderLayout->setSpacing(2);
-    auto* studioTitle = new QLabel(tr("Skin Studio"), studioHeader);
-    studioTitle->setObjectName(QStringLiteral("cloudySettingsTitle"));
-    auto* studioSubtitle = new QLabel(
-        tr("Preview, import and manage skins for the selected Microsoft profile"), studioHeader);
-    studioSubtitle->setObjectName(QStringLiteral("cloudySettingsSubtitle"));
-    studioSubtitle->setWordWrap(true);
-    studioHeaderLayout->addWidget(studioTitle);
-    studioHeaderLayout->addWidget(studioSubtitle);
-    m_ui->verticalLayout->insertWidget(0, studioHeader);
+    if (!m_embedded) {
+        auto* studioHeader = new QFrame(this);
+        studioHeader->setObjectName(QStringLiteral("cloudyDialogHeader"));
+        auto* studioHeaderLayout = new QVBoxLayout(studioHeader);
+        studioHeaderLayout->setContentsMargins(4, 2, 4, 10);
+        studioHeaderLayout->setSpacing(2);
+        auto* studioTitle = new QLabel(tr("Skin Studio"), studioHeader);
+        studioTitle->setObjectName(QStringLiteral("cloudySettingsTitle"));
+        auto* studioSubtitle = new QLabel(
+            tr("Preview, import and manage skins for the selected Microsoft profile"), studioHeader);
+        studioSubtitle->setObjectName(QStringLiteral("cloudySettingsSubtitle"));
+        studioSubtitle->setWordWrap(true);
+        studioHeaderLayout->addWidget(studioTitle);
+        studioHeaderLayout->addWidget(studioSubtitle);
+        m_ui->verticalLayout->insertWidget(0, studioHeader);
+    }
 
     m_ui->urlLine->setPlaceholderText(tr("Username or direct skin URL"));
     m_ui->userBtn->setText(tr("Fetch by nickname"));
@@ -93,9 +103,10 @@ SkinManageDialog::SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct)
         m_skinPreviewLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     }
 
-    setWindowModality(Qt::WindowModal);
-    setWindowTitle(tr("Cloudy Launcher — Skin Studio"));
-    setMinimumSize(QSize(900, 620));
+    if (!m_embedded) {
+        setWindowTitle(tr("Cloudy Launcher — Skin Studio"));
+        setMinimumSize(QSize(900, 620));
+    }
 
     auto contentsWidget = m_ui->listView;
     contentsWidget->setViewMode(QListView::IconMode);

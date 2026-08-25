@@ -89,6 +89,7 @@
 #include <QAccessible>
 #include <QCommandLineParser>
 #include <QDebug>
+#include <QElapsedTimer>
 #include <QDir>
 #include <QFileInfo>
 #include <QFileOpenEvent>
@@ -98,6 +99,7 @@
 #include <QNetworkAccessManager>
 #include <QStringList>
 #include <QStringLiteral>
+#include <QTimer>
 #include <QStyleFactory>
 #include <QTranslator>
 #include <QWindow>
@@ -994,9 +996,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_instances.reset(new InstanceList(m_settings.get(), allInstDirs, this));
         connect(InstDirSetting.get(), &Setting::SettingChanged, m_instances.get(), &InstanceList::on_InstFolderChanged);
         connect(AdditionalInstanceDirsSetting.get(), &Setting::SettingChanged, m_instances.get(), &InstanceList::on_InstFolderChanged);
-        qInfo() << "Loading Instances...";
-        m_instances->loadList();
-        qInfo() << "<> Instances loaded.";
+        qInfo() << "Instance list prepared; loading is deferred until the Cloudy shell is visible.";
     }
 
     // and accounts
@@ -1005,8 +1005,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         qInfo() << "Loading accounts...";
         m_accounts->setListFilePath("accounts.json", true);
         m_accounts->loadList();
-        m_accounts->fillQueue();
-        qInfo() << "<> Accounts loaded.";
+        qInfo() << "<> Accounts loaded; refresh queue is deferred until the Cloudy shell is visible.";
     }
 
     // init the http meta cache
@@ -1057,10 +1056,14 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 #endif
 
     connect(this, &Application::aboutToQuit, this, [this]() {
+        QElapsedTimer shutdownTimer;
+        shutdownTimer.start();
+        qInfo() << "<> Shutdown started.";
         if (m_instances) {
             // save any remaining instance state
             m_instances->saveNow();
         }
+        qInfo() << "<> Instance state saved in" << shutdownTimer.elapsed() << "ms.";
         if (logFile) {
             logFile->flush();
             logFile->close();
@@ -1069,7 +1072,8 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
     updateCapabilities();
 
-    detectLibraries();
+    // Hardware/library probing is intentionally started after the first Cloudy frame.
+    // It is optional startup work and should not delay the application becoming usable.
 
     // check update locks
     {
@@ -1346,6 +1350,12 @@ void Application::setupWizardFinished(int status)
 void Application::performMainStartupAction()
 {
     m_status = Application::Initialized;
+    // Command-line launch/show requests need the model before resolving their id.
+    // Normal startup remains deferred until after the first Cloudy frame.
+    if ((!m_instanceIdToLaunch.isEmpty() || !m_instanceIdToShowWindowOf.isEmpty()) && m_instances && !m_instancesLoaded) {
+        m_instances->loadList();
+        m_instancesLoaded = true;
+    }
     if (!m_instanceIdToLaunch.isEmpty()) {
         auto inst = instances()->getInstanceById(m_instanceIdToLaunch);
         if (inst) {
@@ -1390,6 +1400,25 @@ void Application::performMainStartupAction()
         showMainWindow(false);
         qDebug() << "<> Main window shown.";
     }
+
+    // Load mutable data only after the first frame is on screen. This keeps the
+    // Cloudy shell responsive while preserving all model mutations on the GUI thread.
+    QTimer::singleShot(0, this, [this]() {
+        QElapsedTimer startupTimer;
+        startupTimer.start();
+        qInfo() << "<> Deferred startup work started.";
+        if (m_instances && !m_instancesLoaded) {
+            m_instances->loadList();
+            m_instancesLoaded = true;
+            emit instancesLoaded();
+            qInfo() << "<> Instances loaded in" << startupTimer.elapsed() << "ms.";
+        }
+        if (m_accounts) {
+            m_accounts->fillQueue();
+        }
+        detectLibraries();
+        qInfo() << "<> Deferred startup work completed in" << startupTimer.elapsed() << "ms.";
+    });
 
     // initialize the updater
     if (updaterEnabled()) {
@@ -1666,18 +1695,18 @@ void Application::ShowGlobalSettings(class QWidget* parent, QString open_page)
         return;
 
     emit globalSettingsAboutToOpen();
-    auto* dialog = new PageDialog(m_globalSettingsProvider.get(), open_page, parent);
 
     if (auto* mainWindow = qobject_cast<MainWindow*>(parent)) {
-        // PageDialog already contains the real settings pages. Turn it into an in-app page
-        // rather than duplicating settings logic or exposing credentials to the UI layer.
-        dialog->setWindowFlags(Qt::Widget);
-        dialog->setAttribute(Qt::WA_DeleteOnClose);
-        mainWindow->showEmbeddedPage(dialog);
+        // PageDialog is explicitly created as an embedded widget. Its PageContainer
+        // remains the single settings surface inside the Cloudy workspace.
+        auto* dialog = new PageDialog(m_globalSettingsProvider.get(), open_page, mainWindow, true);
+        connect(dialog, &PageDialog::applied, this, &Application::globalSettingsApplied);
         connect(dialog, &QDialog::finished, mainWindow, [mainWindow] { mainWindow->restoreMainContent(); });
-        dialog->show();
+        mainWindow->showEmbeddedPage(dialog);
         return;
     }
+
+    auto* dialog = new PageDialog(m_globalSettingsProvider.get(), open_page, parent);
 
     SettingsObject::Lock lock(APPLICATION->settings());
     connect(dialog, &PageDialog::applied, this, &Application::globalSettingsApplied);
@@ -1725,10 +1754,21 @@ ViewLogWindow* Application::showLogWindow()
     return m_viewLogWindow;
 }
 
-InstanceWindow* Application::showInstanceWindow(MinecraftInstance* instance, QString page)
+InstanceWindow* Application::showInstanceWindow(MinecraftInstance* instance, QString page, bool embedded)
 {
     if (!instance)
         return nullptr;
+
+    if (embedded) {
+        // Embedded editors are owned by MainWindow's content stack, not by the
+        // top-level window counter or instance extras map used for console windows.
+        auto* window = new InstanceWindow(instance, nullptr, true);
+        if (!page.isEmpty()) {
+            window->selectPage(page);
+        }
+        return window;
+    }
+
     auto id = instance->id();
     QMutexLocker locker(&m_instanceExtrasMutex);
     auto& extras = m_instanceExtras[id];
@@ -1783,9 +1823,12 @@ void Application::on_windowClose()
     if (logWindow) {
         m_viewLogWindow = nullptr;
     }
-    // quit when there are no more windows.
-    if (shouldExitNow()) {
-        exit(0);
+    // quit when there are no more windows. Queue the exit so Qt can finish
+    // dispatching the close event and any pending page cleanup first.
+    if (shouldExitNow() && !m_quitRequested) {
+        m_quitRequested = true;
+        qInfo() << "<> Last Cloudy window closed; scheduling application quit.";
+        QMetaObject::invokeMethod(this, [this]() { QCoreApplication::exit(0); }, Qt::QueuedConnection);
     }
 }
 

@@ -56,7 +56,8 @@ class NewInstanceDialog : public QDialog, public BasePageProvider {
     explicit NewInstanceDialog(const QString& initialGroup,
                                const QString& url = QString(),
                                const QMap<QString, QString>& extraInfo = {},
-                               QWidget* parent = nullptr);
+                               QWidget* parent = nullptr,
+                               bool embedded = false);
     ~NewInstanceDialog() override;
 
     void updateDialogState();
@@ -99,6 +100,7 @@ class NewInstanceDialog : public QDialog, public BasePageProvider {
     ImportPage* m_importPage = nullptr;
     std::unique_ptr<InstanceTask> m_creationTask;
 
+    bool m_embedded = false;
     bool m_importIcon = false;
     QString m_importIconPath;
     QString m_importIconName;
