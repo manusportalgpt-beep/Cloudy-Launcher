@@ -252,48 +252,59 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         // The right rail starts with a compact live summary, then reuses the existing actions.
         auto* instanceDetails = new QFrame(this);
         instanceDetails->setObjectName(QStringLiteral("cloudyInstanceDetails"));
-        instanceDetails->setMinimumWidth(190);
-        auto* instanceDetailsLayout = new QHBoxLayout(instanceDetails);
-        instanceDetailsLayout->setContentsMargins(8, 8, 8, 8);
-        instanceDetailsLayout->setSpacing(9);
+        instanceDetails->setMinimumWidth(260);
+        auto* instanceDetailsLayout = new QVBoxLayout(instanceDetails);
+        instanceDetailsLayout->setContentsMargins(12, 14, 12, 12);
+        instanceDetailsLayout->setSpacing(6);
 
         m_instanceIcon = new QLabel(instanceDetails);
         m_instanceIcon->setObjectName(QStringLiteral("cloudyInstanceIcon"));
-        m_instanceIcon->setFixedSize(QSize(58, 58));
+        m_instanceIcon->setFixedSize(QSize(92, 92));
         m_instanceIcon->setAlignment(Qt::AlignCenter);
+        instanceDetailsLayout->addWidget(m_instanceIcon, 0, Qt::AlignHCenter);
 
-        auto* instanceText = new QVBoxLayout();
-        instanceText->setSpacing(2);
         m_instanceTitle = new QLabel(tr("No instance selected"), instanceDetails);
         m_instanceTitle->setObjectName(QStringLiteral("cloudyInstanceTitle"));
+        m_instanceTitle->setAlignment(Qt::AlignCenter);
         m_instanceTitle->setWordWrap(true);
         m_instanceMeta = new QLabel(tr("Choose an instance from your library"), instanceDetails);
         m_instanceMeta->setObjectName(QStringLiteral("cloudyInstanceMeta"));
+        m_instanceMeta->setAlignment(Qt::AlignCenter);
         m_instanceMeta->setWordWrap(true);
-        instanceText->addWidget(m_instanceTitle);
-        instanceText->addWidget(m_instanceMeta);
-        instanceText->addStretch(1);
-        instanceDetailsLayout->addWidget(m_instanceIcon);
-        instanceDetailsLayout->addLayout(instanceText, 1);
+        instanceDetailsLayout->addWidget(m_instanceTitle);
+        instanceDetailsLayout->addWidget(m_instanceMeta);
+        instanceDetailsLayout->addStretch(1);
         ui->instanceToolBar->addWidget(instanceDetails);
         ui->instanceToolBar->addSeparator();
 
         // if you try to add a widget to a toolbar in a .ui file
         // qt designer will delete it when you save the file >:(
         changeIconButton = new LabeledToolButton(this);
-        changeIconButton->setObjectName(QStringLiteral("changeIconButton"));
+        changeIconButton->setObjectName(QStringLiteral("cloudySecondaryButton"));
+        changeIconButton->setText(tr("Change icon"));
         changeIconButton->setIcon(QIcon::fromTheme("news"));
         changeIconButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
         connect(changeIconButton, &QToolButton::clicked, this, &MainWindow::on_actionChangeInstIcon_triggered);
         ui->instanceToolBar->insertWidgetBefore(ui->actionLaunchInstance, changeIconButton);
 
         renameButton = new LabeledToolButton(this);
-        renameButton->setObjectName(QStringLiteral("renameButton"));
+        renameButton->setObjectName(QStringLiteral("cloudySecondaryButton"));
+        renameButton->setText(tr("Rename"));
         renameButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
         connect(renameButton, &QToolButton::clicked, this, &MainWindow::on_actionRenameInstance_triggered);
         ui->instanceToolBar->insertWidgetBefore(ui->actionLaunchInstance, renameButton);
 
         ui->instanceToolBar->insertSeparator(ui->actionLaunchInstance);
+
+        const auto markActionButton = [this](QAction* action, const QString& objectName) {
+            if (auto* button = qobject_cast<QToolButton*>(ui->instanceToolBar->widgetForAction(action))) {
+                button->setObjectName(objectName);
+                button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+            }
+        };
+        markActionButton(ui->actionLaunchInstance, QStringLiteral("cloudyLaunchButton"));
+        markActionButton(ui->actionEditInstance, QStringLiteral("cloudySecondaryButton"));
+        markActionButton(ui->actionViewSelectedInstFolder, QStringLiteral("cloudySecondaryButton"));
 
         // restore the instance toolbar settings
         const auto setting_name = QString("WideBarVisibility_%1").arg(ui->instanceToolBar->objectName());
@@ -408,6 +419,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     // Create the instance list widget
     {
         view = new InstanceView(ui->centralWidget);
+        view->setObjectName(QStringLiteral("cloudyInstanceView"));
+        connect(view, &InstanceView::emptyStateClicked, this, &MainWindow::on_actionAddInstance_triggered);
 
         view->setSelectionMode(QAbstractItemView::SingleSelection);
         // FIXME: leaks ListViewDelegate
@@ -658,9 +671,9 @@ void MainWindow::setCloudyNavigationMode(bool notch)
 
     m_cloudySidebar->setVisible(!notch);
     m_cloudyNotch->setVisible(notch);
-    // Cloudy owns primary navigation; keep the legacy toolbar available through the menu,
-    // but do not let it compete with the redesigned surface.
-    ui->mainToolBar->setVisible(false);
+    // The reference keeps a labeled top command bar above the left navigation rail.
+    // Notch mode is the compact alternative; Sidebar mode keeps the full command bar visible.
+    ui->mainToolBar->setVisible(!notch);
     ui->newsToolBar->setVisible(false);
     menuBar()->setVisible(false);
     if (auto setting = APPLICATION->settings()->getOrRegisterSetting(
@@ -782,8 +795,10 @@ void MainWindow::showInstanceContextMenu(const QPoint& pos)
 
 void MainWindow::updateMainToolBar()
 {
-    ui->menuBar->setVisible(APPLICATION->settings()->get("MenuBarInsteadOfToolBar").toBool());
-    ui->mainToolBar->setVisible(ui->menuBar->isNativeMenuBar() || !APPLICATION->settings()->get("MenuBarInsteadOfToolBar").toBool());
+    const bool useMenuBar = APPLICATION->settings()->get("MenuBarInsteadOfToolBar").toBool();
+    const bool useNotch = m_toggleCloudyNavigation && m_toggleCloudyNavigation->isChecked();
+    ui->menuBar->setVisible(useMenuBar && !useNotch);
+    ui->mainToolBar->setVisible(!useNotch && (ui->menuBar->isNativeMenuBar() || !useMenuBar));
 }
 
 void MainWindow::updateLaunchButton()
@@ -1427,7 +1442,8 @@ void MainWindow::updateInstanceToolIcon(QString new_icon)
     ui->actionChangeInstIcon->setIcon(icon);
     changeIconButton->setIcon(icon);
     if (m_instanceIcon) {
-        m_instanceIcon->setPixmap(icon.pixmap(QSize(42, 42)));
+        const QIcon heroIcon = m_selectedInstance ? icon : APPLICATION->logo();
+        m_instanceIcon->setPixmap(heroIcon.pixmap(QSize(70, 70)));
     }
 }
 

@@ -62,9 +62,9 @@ QPalette DarkTheme::colorScheme()
     darkPalette.setColor(QPalette::Button, QColor(48, 48, 48));
     darkPalette.setColor(QPalette::ButtonText, Qt::white);
     darkPalette.setColor(QPalette::BrightText, Qt::red);
-    darkPalette.setColor(QPalette::Link, QColor(47, 163, 198));
-    darkPalette.setColor(QPalette::Highlight, QColor(150, 219, 89));
-    darkPalette.setColor(QPalette::HighlightedText, Qt::black);
+    darkPalette.setColor(QPalette::Link, QColor(190, 190, 190));
+    darkPalette.setColor(QPalette::Highlight, QColor(92, 92, 92));
+    darkPalette.setColor(QPalette::HighlightedText, Qt::white);
     darkPalette.setColor(QPalette::PlaceholderText, Qt::darkGray);
     return fadeInactive(darkPalette, fadeAmount(), fadeColor());
 }
@@ -86,7 +86,7 @@ bool DarkTheme::hasStyleSheet()
 
 QString DarkTheme::appStyleSheet()
 {
-    return QStringLiteral("QToolTip { color: #ffffff; background-color: #2a82da; border: 1px solid white; }")
+    return QStringLiteral("QToolTip { color: palette(text); background-color: palette(base); border: 1px solid palette(mid); }")
            + CloudyStyle::applicationStyleSheet();
 }
 

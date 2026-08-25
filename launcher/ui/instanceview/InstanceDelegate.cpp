@@ -36,7 +36,9 @@
 #include "InstanceDelegate.h"
 #include <QApplication>
 #include <QDebug>
+#include <QDir>
 #include <QPainter>
+#include <QPixmap>
 #include <QTextLayout>
 #include <QTextOption>
 #include <QtMath>
@@ -191,15 +193,25 @@ void ListViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
     QStyle* style = opt.widget ? opt.widget->style() : QApplication::style();
 
     // const int iconSize =  style->pixelMetric(QStyle::PM_IconViewIconSize);
-    const int iconSize = 48;
+    const int previewHeight = 100;
     QRect iconbox = opt.rect;
+    auto instance = (BaseInstance*)index.data(InstanceList::InstancePointerRole).value<void*>();
+    QPixmap preview;
+    if (instance) {
+        QDir screenshots(QDir(instance->instanceRoot()).filePath(QStringLiteral("screenshots")));
+        const auto files = screenshots.entryInfoList({ QStringLiteral("*.png"), QStringLiteral("*.jpg"), QStringLiteral("*.jpeg") },
+                                                       QDir::Files, QDir::Time);
+        if (!files.isEmpty()) {
+            preview.load(files.constFirst().absoluteFilePath());
+        }
+    }
     const int textMargin = style->pixelMetric(QStyle::PM_FocusFrameHMargin, 0, opt.widget) + 1;
     QRect textRect = opt.rect;
     QRect textHighlightRect = textRect;
     // clip the decoration on top, remove width padding
-    textRect.adjust(textMargin, iconSize + textMargin + 5, -textMargin, 0);
+    textRect.adjust(textMargin, previewHeight + textMargin + 10, -textMargin, 0);
 
-    textHighlightRect.adjust(0, iconSize + 5, 0, 0);
+    textHighlightRect.adjust(0, previewHeight + 10, 0, 0);
 
     // Draw a NeoPrism-style surface: quiet cards with a clear selected state.
     {
@@ -218,6 +230,22 @@ void ListViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
             painter->setBrush(Qt::NoBrush);
             painter->drawRoundedRect(cardRect.adjusted(1, 1, -1, -1), 9, 9);
         }
+        const QRect previewRect = cardRect.adjusted(8, 8, -8, -cardRect.height() + previewHeight + 8);
+        painter->save();
+        painter->setClipRect(previewRect);
+        if (!preview.isNull()) {
+            const QPixmap scaled = preview.scaled(previewRect.size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+            const QRect source((scaled.width() - previewRect.width()) / 2, (scaled.height() - previewRect.height()) / 2,
+                               previewRect.width(), previewRect.height());
+            painter->drawPixmap(previewRect, scaled, source);
+        } else {
+            painter->fillRect(previewRect, opt.palette.brush(QPalette::AlternateBase));
+        }
+        painter->restore();
+        painter->setPen(QPen(opt.palette.color(QPalette::Mid), 1));
+        painter->setBrush(Qt::NoBrush);
+        painter->drawRoundedRect(previewRect, 6, 6);
+
         painter->setPen(Qt::NoPen);
         painter->setBrush(Qt::NoBrush);
         /*
@@ -284,9 +312,12 @@ void ListViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
         mode = QIcon::Selected;
     QIcon::State state = opt.state & QStyle::State_Open ? QIcon::On : QIcon::Off;
 
-    // draw the icon
-    {
-        iconbox.setHeight(iconSize);
+    // Draw the instance icon in the preview placeholder. Screenshot-backed cards
+    // use the image as their primary visual, matching the Cloudy concept.
+    if (preview.isNull()) {
+        iconbox = opt.rect;
+        iconbox.setTop(opt.rect.top() + 8);
+        iconbox.setHeight(previewHeight);
         opt.icon.paint(painter, iconbox, Qt::AlignCenter, mode, state);
     }
     // set the text colors
@@ -322,7 +353,6 @@ void ListViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
     }
 
     // FIXME: this really has no business of being here. Make generic.
-    auto instance = (BaseInstance*)index.data(InstanceList::InstancePointerRole).value<void*>();
     if (instance) {
         drawBadges(painter, opt, instance, mode, state);
     }
@@ -344,11 +374,11 @@ QSize ListViewDelegate::sizeHint(const QStyleOptionViewItem& option, const QMode
 
     QStyle* style = opt.widget ? opt.widget->style() : QApplication::style();
     const int textMargin = style->pixelMetric(QStyle::PM_FocusFrameHMargin, &option, opt.widget) + 1;
-    int height = 48 + textMargin * 2 + 5;  // TODO: turn constants into variables
+    int height = 100 + textMargin * 2 + 5;  // preview area followed by the instance name
     QSize szz = viewItemTextSize(&opt);
     height += szz.height();
     // FIXME: maybe the icon items could scale and keep proportions?
-    QSize sz(148, height + 10);
+    QSize sz(210, height + 24);
     return sz;
 }
 

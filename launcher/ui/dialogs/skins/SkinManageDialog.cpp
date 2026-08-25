@@ -33,6 +33,10 @@
 #include <QPainter>
 #include <QUrl>
 
+#include <QFrame>
+#include <QLabel>
+#include <QVBoxLayout>
+
 #include "Application.h"
 #include "settings/SettingsObject.h"
 #include "DesktopServices.h"
@@ -59,6 +63,25 @@ SkinManageDialog::SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct)
 {
     m_ui->setupUi(this);
     setObjectName(QStringLiteral("cloudyDialog"));
+    m_ui->listView->setObjectName(QStringLiteral("cloudySkinLibrary"));
+    m_ui->modelBox->setObjectName(QStringLiteral("cloudySection"));
+    m_ui->capeBox->setObjectName(QStringLiteral("cloudySection"));
+
+    auto* studioHeader = new QFrame(this);
+    studioHeader->setObjectName(QStringLiteral("cloudyDialogHeader"));
+    auto* studioHeaderLayout = new QVBoxLayout(studioHeader);
+    studioHeaderLayout->setContentsMargins(4, 2, 4, 10);
+    studioHeaderLayout->setSpacing(2);
+    auto* studioTitle = new QLabel(tr("Skin Studio"), studioHeader);
+    studioTitle->setObjectName(QStringLiteral("cloudySettingsTitle"));
+    auto* studioSubtitle = new QLabel(
+        tr("Preview, import and manage skins for the selected Microsoft profile"), studioHeader);
+    studioSubtitle->setObjectName(QStringLiteral("cloudySettingsSubtitle"));
+    studioSubtitle->setWordWrap(true);
+    studioHeaderLayout->addWidget(studioTitle);
+    studioHeaderLayout->addWidget(studioSubtitle);
+    m_ui->verticalLayout->insertWidget(0, studioHeader);
+
     m_ui->urlLine->setPlaceholderText(tr("Username or direct skin URL"));
     m_ui->userBtn->setText(tr("Fetch by nickname"));
     m_ui->urlBtn->setText(tr("Import URL"));

@@ -41,6 +41,7 @@
 #include <QDrag>
 #include <QFont>
 #include <QListView>
+#include <QIcon>
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPainter>
@@ -54,6 +55,13 @@
 
 #include <Application.h>
 #include <InstanceList.h>
+
+QRect cloudyEmptyStateRect(const QRect& bounds)
+{
+    const int width = qMax(220, qMin(620, bounds.width() - 48));
+    const int height = qMax(150, qMin(190, bounds.height() - 48));
+    return QRect((bounds.width() - width) / 2, (bounds.height() - height) / 2, width, height);
+}
 
 template <typename T>
 bool listsIntersect(const QList<T>& l1, const QList<T> t2)
@@ -372,6 +380,13 @@ void InstanceView::mouseReleaseEvent(QMouseEvent* event)
     QPoint geometryPos = event->pos() + offset();
     QPersistentModelIndex index = indexAt(visualPos);
 
+    if (event->button() == Qt::LeftButton && model() && model()->rowCount() == 0 &&
+        cloudyEmptyStateRect(viewport()->rect()).contains(event->pos())) {
+        emit emptyStateClicked();
+        event->accept();
+        return;
+    }
+
     VisualGroup::HitResults hitResult;
 
     if (event->button() == Qt::LeftButton && m_pressedCategory != nullptr && m_pressedCategory == categoryAt(geometryPos, hitResult)) {
@@ -469,41 +484,46 @@ void InstanceView::paintEvent([[maybe_unused]] QPaintEvent* event)
 
     if (model()->rowCount() == 0) {
         painter.save();
-        QString emptyString = tr("Welcome!") + "\n" + tr("Click \"Add Instance\" to get started.");
-
-        // calculate the rect for the overlay
         painter.setRenderHint(QPainter::Antialiasing, true);
-        QFont font("sans", 20);
-        font.setBold(true);
 
-        QRect bounds = viewport()->geometry();
-        bounds.moveTop(0);
-        auto innerBounds = bounds;
-        innerBounds.adjust(10, 10, -10, -10);
-
-        QColor background = QApplication::palette().color(QPalette::WindowText);
-        QColor foreground = QApplication::palette().color(QPalette::Base);
-        foreground.setAlpha(190);
-        painter.setFont(font);
-        auto fontMetrics = painter.fontMetrics();
-        auto textRect = fontMetrics.boundingRect(innerBounds, Qt::AlignHCenter | Qt::TextWordWrap, emptyString);
-        textRect.moveCenter(bounds.center());
-
-        auto wrapRect = textRect;
-        wrapRect.adjust(-10, -10, 10, 10);
-
-        // check if we are allowed to draw in our area
-        if (!event->rect().intersects(wrapRect)) {
+        const QRect tile = cloudyEmptyStateRect(viewport()->rect());
+        if (!event->rect().intersects(tile)) {
+            painter.restore();
             return;
         }
 
-        painter.setBrush(QBrush(background));
-        painter.setPen(foreground);
-        painter.drawRoundedRect(wrapRect, 5.0, 5.0);
+        QColor tileBackground = palette().color(QPalette::Base);
+        tileBackground.setAlpha(245);
+        const QColor border = palette().color(QPalette::Mid);
+        const QColor foreground = palette().color(QPalette::WindowText);
+        const QColor secondary = palette().color(QPalette::Mid);
+        painter.setBrush(tileBackground);
+        painter.setPen(QPen(border, 1));
+        painter.drawRoundedRect(tile, 9.0, 9.0);
 
+        const QPoint center(tile.center().x(), tile.top() + 38);
+        QPen plusPen(palette().color(QPalette::Highlight));
+        plusPen.setWidth(3);
+        plusPen.setCapStyle(Qt::RoundCap);
+        painter.setPen(plusPen);
+        painter.drawLine(center.x() - 12, center.y(), center.x() + 12, center.y());
+        painter.drawLine(center.x(), center.y() - 12, center.x(), center.y() + 12);
+
+        QFont titleFont = font();
+        titleFont.setBold(true);
+        titleFont.setPointSizeF(titleFont.pointSizeF() + 1.5);
+        painter.setFont(titleFont);
         painter.setPen(foreground);
-        painter.setFont(font);
-        painter.drawText(textRect, Qt::AlignHCenter | Qt::TextWordWrap, emptyString);
+        painter.drawText(QRect(tile.left() + 20, tile.top() + 68, tile.width() - 40, 28), Qt::AlignHCenter,
+                         tr("Welcome to Cloudy Launcher"));
+
+        QFont bodyFont = font();
+        bodyFont.setPointSizeF(qMax(9.0, bodyFont.pointSizeF() - 0.5));
+        painter.setFont(bodyFont);
+        painter.setPen(secondary);
+        painter.drawText(QRect(tile.left() + 20, tile.top() + 102, tile.width() - 40, 42),
+                         Qt::AlignHCenter | Qt::TextWordWrap,
+                         tr("Create your first Minecraft instance to get started."));
 
         painter.restore();
         return;

@@ -94,6 +94,7 @@ class InstanceView : public QAbstractItemView {
    signals:
     void droppedURLs(QList<QUrl> urls);
     void groupStateChanged(QString group, bool collapsed);
+    void emptyStateClicked();
 
    protected:
     bool isIndexHidden(const QModelIndex& index) const override;
