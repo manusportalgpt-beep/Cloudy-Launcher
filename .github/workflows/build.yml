@@ -17,28 +17,12 @@ on:
       environment:
         description: Deployment environment to run under
         type: string
-      target:
-        description: Optional matrix target to build (for example Windows-MSVC)
-        type: string
-        default: all
   workflow_dispatch:
     inputs:
       build-type:
         description: Type of build (Debug or Release)
         type: string
         default: Debug
-      target:
-        description: Matrix target to build, or all
-        type: choice
-        options:
-          - all
-          - Linux
-          - Linux-aarch64
-          - Windows-MinGW-w64
-          - Windows-MSVC
-          - Windows-MSVC-arm64
-          - macOS
-        default: Windows-MSVC
 
 permissions: {}
 
@@ -94,7 +78,6 @@ jobs:
             macosx-deployment-target: 12.0
             qt-version: 6.9.3
 
-    if: ${{ inputs.target == '' || inputs.target == 'all' || matrix.artifact-name == inputs.target }}
     runs-on: ${{ matrix.os }}
 
     defaults:
