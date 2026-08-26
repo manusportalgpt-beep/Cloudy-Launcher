@@ -10,10 +10,15 @@
 
 #include "CloudyWebBridge.h"
 #include "MainWindow.h"
+#include "Application.h"
+#include "settings/SettingsObject.h"
 
+#include <QApplication>
 #include <QBuffer>
+#include <QColor>
 #include <QFile>
 #include <QMimeDatabase>
+#include <QPalette>
 #include <QResizeEvent>
 #include <QUrl>
 #include <QWebChannel>
@@ -44,10 +49,21 @@ QString buildCloudyDocument()
     QByteArray html = readCloudyResource(QStringLiteral(":/cloudy-web/index.html"));
     const QByteArray css = readCloudyResource(QStringLiteral(":/cloudy-web/app.css"));
     const QByteArray channel = readCloudyResource(QStringLiteral(":/cloudy-web/qwebchannel.js"));
-    const QByteArray app = readCloudyResource(QStringLiteral(":/cloudy-web/app.js"));
+    QByteArray app = readCloudyResource(QStringLiteral(":/cloudy-web/app.js"));
     const QByteArray cloudArt = readCloudyResource(QStringLiteral(":/cloudy-web/cloud-art.png")).toBase64();
+    const QByteArray cloudyIcon = readCloudyResource(QStringLiteral(":/cloudy-web/cloudy-icon.png")).toBase64();
+    const auto providerIcon = [](const QString& name) {
+        return readCloudyResource(QStringLiteral(":/cloudy-web/providers/") + name + QStringLiteral(".svg")).toBase64();
+    };
 
     html.replace("CLOUDY_CLOUD_ART", cloudArt);
+    html.replace("CLOUDY_ICON_DATA", QByteArrayLiteral("data:image/png;base64,") + cloudyIcon);
+    app.replace("CLOUDY_PROVIDER_CUSTOM", providerIcon(QStringLiteral("custom")));
+    app.replace("CLOUDY_PROVIDER_MODRINTH", providerIcon(QStringLiteral("modrinth")));
+    app.replace("CLOUDY_PROVIDER_CURSEFORGE", providerIcon(QStringLiteral("curseforge")));
+    app.replace("CLOUDY_PROVIDER_FTB", providerIcon(QStringLiteral("ftb")));
+    app.replace("CLOUDY_PROVIDER_TECHNIC", providerIcon(QStringLiteral("technic")));
+    app.replace("CLOUDY_PROVIDER_IMPORT", providerIcon(QStringLiteral("import")));
     html.replace("<!-- CLOUDY_CSS -->", "<style>" + css + "</style>");
     html.replace("<!-- CLOUDY_WEBCHANNEL_JS -->", "<script>" + channel + "</script>");
     html.replace("<!-- CLOUDY_APP_JS -->", "<script>" + app + "</script>");
@@ -112,6 +128,54 @@ void registerCloudyScheme()
     });
 }
 
+QString cloudyNativeStyleSheet()
+{
+    const auto applicationTheme = APPLICATION && APPLICATION->settings() ? APPLICATION->settings()->get("ApplicationTheme").toString() : QString();
+    if (applicationTheme != QStringLiteral("dark")) {
+        // Named user themes remain fully controlled by Prism/Cloudy ThemeManager.
+        return {};
+    }
+
+    const auto window = QStringLiteral("#101316");
+    const auto surface = QStringLiteral("#161a1e");
+    const auto text = QStringLiteral("#f3f5f7");
+    const auto muted = QStringLiteral("#a8b1ba");
+    const auto line = QStringLiteral("#46515b");
+    const auto highlight = QStringLiteral("#39444e");
+    return QStringLiteral(
+               "QWidget#cloudyNativePage { background: %1; color: %2; }"
+               "QWidget#cloudyNativePage QLabel { color: %2; }"
+               "QWidget#cloudyNativePage #cloudySettingsHeader { background: %1; border-bottom: 1px solid %3; }"
+               "QWidget#cloudyNativePage #cloudyPageTitle { font-size: 16px; font-weight: 650; padding: 2px 0; }"
+               "QWidget#cloudyNativePage #cloudyPageWorkspace { background: %1; }"
+               "QWidget#cloudyNativePage #cloudyPageNav { background: %1; border: 0; padding: 4px 0; }"
+               "QWidget#cloudyNativePage #cloudyPageNav::item { color: %4; border: 1px solid transparent; border-radius: 8px; padding: 8px 10px; margin: 1px 0; }"
+               "QWidget#cloudyNativePage #cloudyPageNav::item:hover { color: %2; background: %5; }"
+               "QWidget#cloudyNativePage #cloudyPageNav::item:selected { color: %2; background: %5; border: 1px solid %3; }"
+               "QWidget#cloudyNativePage QLineEdit, QWidget#cloudyNativePage QPlainTextEdit, QWidget#cloudyNativePage QTextEdit, QWidget#cloudyNativePage QComboBox, QWidget#cloudyNativePage QSpinBox, QWidget#cloudyNativePage QDoubleSpinBox { color: %2; background: %5; border: 1px solid %3; border-radius: 7px; padding: 6px 8px; selection-background-color: %6; }"
+               "QWidget#cloudyNativePage QListView, QWidget#cloudyNativePage QTreeView, QWidget#cloudyNativePage QTableView { color: %2; background: %5; alternate-background-color: %1; border: 1px solid %3; border-radius: 8px; selection-background-color: %6; selection-color: %7; }"
+               "QWidget#cloudyNativePage QHeaderView::section { color: %4; background: %1; border: 0; border-bottom: 1px solid %3; padding: 6px 8px; }"
+               "QWidget#cloudyNativePage QTabBar::tab { color: %4; background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 8px 10px; margin-right: 3px; }"
+               "QWidget#cloudyNativePage QTabBar::tab:hover, QWidget#cloudyNativePage QTabBar::tab:selected { color: %2; background: %5; border-color: %3; }"
+               "QWidget#cloudyNativePage QPushButton { color: %2; background: transparent; border: 1px solid %3; border-radius: 8px; padding: 7px 13px; }"
+               "QWidget#cloudyNativePage QPushButton:hover { background: %5; border-color: %2; }"
+               "QWidget#cloudyNativePage QDialogButtonBox QPushButton { min-width: 72px; }"
+               "QWidget#cloudyNativePage QDialogButtonBox QPushButton[text=\\\"OK\\\"] { color: %8; background: %6; border-color: %6; font-weight: 650; }"
+               "QWidget#cloudyNativePage QCheckBox::indicator, QWidget#cloudyNativePage QRadioButton::indicator { width: 15px; height: 15px; border: 1px solid %3; border-radius: 4px; background: %5; }"
+               "QWidget#cloudyNativePage QCheckBox::indicator:checked, QWidget#cloudyNativePage QRadioButton::indicator:checked { background: %6; border-color: %6; }"
+               "QWidget#cloudyNativePage QScrollBar:vertical { background: transparent; width: 8px; margin: 2px; }"
+               "QWidget#cloudyNativePage QScrollBar::handle:vertical { background: %3; border-radius: 4px; min-height: 24px; }"
+           )
+        .arg(window)
+        .arg(text)
+        .arg(line)
+        .arg(muted)
+        .arg(surface)
+        .arg(highlight)
+        .arg(text)
+        .arg(text);
+}
+
 }  // namespace
 
 CloudyWebShell::CloudyWebShell(MainWindow* window, QWidget* parent) : QWidget(parent)
@@ -139,8 +203,8 @@ QRect CloudyWebShell::nativeContentRect() const
 {
     // Keep the web-rendered Cloudy app bar and rail visible while a real native
     // workflow is open. Native pages occupy only the body content rectangle.
-    constexpr int railWidth = 54;
-    constexpr int headerHeight = 38;
+    constexpr int railWidth = 64;
+    constexpr int headerHeight = 48;
     return QRect(railWidth, headerHeight, qMax(0, width() - railWidth), qMax(0, height() - headerHeight));
 }
 
@@ -159,6 +223,7 @@ void CloudyWebShell::showNativePage(QWidget* page)
     m_nativePage->setObjectName(QStringLiteral("cloudyNativePage"));
     m_nativePage->setWindowFlags(Qt::Widget);
     m_nativePage->setAttribute(Qt::WA_DeleteOnClose, false);
+    m_nativePage->setStyleSheet(cloudyNativeStyleSheet());
     m_nativePage->setGeometry(nativeContentRect());
     m_nativePage->raise();
     m_nativePage->show();
@@ -175,6 +240,21 @@ void CloudyWebShell::restoreWebPage()
     m_webView->setFocus();
     if (m_bridge)
         m_bridge->stateChanged();
+}
+
+void CloudyWebShell::prepareForShutdown()
+{
+    if (!m_webView || !m_webView->page())
+        return;
+
+    if (m_nativePage)
+        m_nativePage->hide();
+
+    m_webView->hide();
+    m_webView->stop();
+    m_webView->page()->setWebChannel(nullptr);
+    m_webView->page()->setVisible(false);
+    qInfo() << "Cloudy WebEngine page stopped before shutdown.";
 }
 
 void CloudyWebShell::resizeEvent(QResizeEvent* event)

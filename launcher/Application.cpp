@@ -67,10 +67,6 @@
 #include "ui/pages/global/MinecraftPage.h"
 #include "ui/pages/global/ProxyPage.h"
 
-#include "ui/setupwizard/AutoJavaWizardPage.h"
-#include "ui/setupwizard/JavaWizardPage.h"
-#include "ui/setupwizard/LanguageWizardPage.h"
-#include "ui/setupwizard/LoginWizardPage.h"
 #include "ui/setupwizard/PasteWizardPage.h"
 #include "ui/setupwizard/SetupWizard.h"
 #include "ui/setupwizard/ThemeWizardPage.h"
@@ -1225,33 +1221,27 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
 bool Application::createSetupWizard()
 {
-    bool javaRequired = [this]() {
-        if (BuildConfig.JAVA_DOWNLOADER_ENABLED && settings()->get("AutomaticJavaDownload").toBool()) {
-            return false;
-        }
-        bool ignoreJavaWizard = settings()->get("IgnoreJavaWizard").toBool();
-        if (ignoreJavaWizard) {
-            return false;
-        }
-        QString currentHostName = QHostInfo::localHostName();
-        QString oldHostName = settings()->get("LastHostname").toString();
-        if (currentHostName != oldHostName) {
-            settings()->set("LastHostname", currentHostName);
-            return true;
-        }
-        QString currentJavaPath = settings()->get("JavaPath").toString();
-        QString actualPath = FS::ResolveExecutable(currentJavaPath);
-        return actualPath.isNull();
-    }();
-    bool askjava = BuildConfig.JAVA_DOWNLOADER_ENABLED && !javaRequired && !settings()->get("AutomaticJavaDownload").toBool() &&
-                   !settings()->get("AutomaticJavaSwitch").toBool() && !settings()->get("UserAskedAboutAutomaticJavaDownload").toBool();
-    bool languageRequired = settings()->get("Language").toString().isEmpty();
+    const bool languageWasUnset = settings()->get("Language").toString().isEmpty();
     bool pasteInterventionRequired = settings()->get("PastebinURL") != "";
     bool validWidgets = m_themeManager->isValidApplicationTheme(settings()->get("ApplicationTheme").toString());
     bool validIcons = m_themeManager->isValidIconTheme(settings()->get("IconTheme").toString());
-    bool login = !m_accounts->anyAccountIsValid() && capabilities() & Application::SupportsMSA;
-    bool themeInterventionRequired = !validWidgets || !validIcons;
-    bool wizardRequired = javaRequired || languageRequired || pasteInterventionRequired || themeInterventionRequired || askjava || login;
+    // The first-run wizard must not prevent the user from reaching Cloudy when
+    // Java or an account is not available yet. Those are launch prerequisites,
+    // not reasons to hide the library and the secure account manager.
+    if (languageWasUnset) {
+        settings()->set("Language", QStringLiteral("en_US"));
+    }
+    if (!validWidgets && settings()->get("ApplicationTheme").toString().isEmpty()) {
+        settings()->set("ApplicationTheme", QStringLiteral("dark"));
+        validWidgets = true;
+    }
+    if (!validIcons && settings()->get("IconTheme").toString().isEmpty()) {
+        settings()->set("IconTheme", QStringLiteral("flat"));
+        validIcons = true;
+    }
+
+    const bool themeInterventionRequired = !validWidgets || !validIcons;
+    const bool wizardRequired = pasteInterventionRequired || themeInterventionRequired;
     if (wizardRequired) {
         // set default theme after going into theme wizard
         if (!validIcons)
@@ -1270,16 +1260,6 @@ bool Application::createSetupWizard()
         m_themeManager->applyCurrentlySelectedTheme(true);
 
         m_setupWizard = new SetupWizard(nullptr);
-        if (languageRequired) {
-            m_setupWizard->addPage(new LanguageWizardPage(m_setupWizard));
-        }
-
-        if (javaRequired) {
-            m_setupWizard->addPage(new JavaWizardPage(m_setupWizard));
-        } else if (askjava) {
-            m_setupWizard->addPage(new AutoJavaWizardPage(m_setupWizard));
-        }
-
         if (pasteInterventionRequired) {
             m_setupWizard->addPage(new PasteWizardPage(m_setupWizard));
         }
@@ -1288,14 +1268,11 @@ bool Application::createSetupWizard()
             m_setupWizard->addPage(new ThemeWizardPage(m_setupWizard));
         }
 
-        if (login) {
-            m_setupWizard->addPage(new LoginWizardPage(m_setupWizard));
-        }
         connect(m_setupWizard, &QDialog::finished, this, &Application::setupWizardFinished);
         m_setupWizard->show();
     }
 
-    return wizardRequired || login;
+    return wizardRequired;
 }
 
 bool Application::updaterEnabled()
@@ -1547,9 +1524,9 @@ JavaInstallList* Application::javalist()
 
 QIcon Application::logo()
 {
-    const QIcon cloudyMark(QStringLiteral(":/cloudy-web/cloudy-mark.svg"));
-    if (!cloudyMark.isNull())
-        return cloudyMark;
+    const QIcon cloudyIcon(QStringLiteral(":/cloudy-web/cloudy-icon.png"));
+    if (!cloudyIcon.isNull())
+        return cloudyIcon;
     return QIcon(":/" + BuildConfig.LAUNCHER_SVGFILENAME);
 }
 

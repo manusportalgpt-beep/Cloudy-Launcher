@@ -2046,6 +2046,8 @@ void MainWindow::closeEvent(QCloseEvent* event)
     APPLICATION->settings()->set("MainWindowGeometry", QString::fromUtf8(saveGeometry().toBase64()));
     // The legacy instance toolbar is no longer part of the visible Cloudy workspace.
     // Do not dereference its old visibility setting during shutdown.
+    if (m_cloudyWebShell)
+        m_cloudyWebShell->prepareForShutdown();
     event->accept();
     emit isClosing();
 }

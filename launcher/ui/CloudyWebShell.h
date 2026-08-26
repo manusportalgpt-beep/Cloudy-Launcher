@@ -27,6 +27,7 @@ class CloudyWebShell : public QWidget {
 
     void showNativePage(QWidget* page);
     void restoreWebPage();
+    void prepareForShutdown();
 
    protected:
     void resizeEvent(QResizeEvent* event) override;

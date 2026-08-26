@@ -57,6 +57,14 @@
   };
 
   const shellButton = (label, action, extra = "") => `<button class="action-button ${extra}" data-action="${action}">${label}</button>`;
+  const providerIconSources = {
+    custom: "data:image/svg+xml;base64,CLOUDY_PROVIDER_CUSTOM",
+    modrinth: "data:image/svg+xml;base64,CLOUDY_PROVIDER_MODRINTH",
+    curseforge: "data:image/svg+xml;base64,CLOUDY_PROVIDER_CURSEFORGE",
+    ftb: "data:image/svg+xml;base64,CLOUDY_PROVIDER_FTB",
+    technic: "data:image/svg+xml;base64,CLOUDY_PROVIDER_TECHNIC",
+    import: "data:image/svg+xml;base64,CLOUDY_PROVIDER_IMPORT",
+  };
 
   const renderHome = ({ instances, account, hasAccount }) => {
     const cards = instances.map((item) => `
@@ -106,18 +114,18 @@
 
   const renderNew = () => {
     const providers = [
-      ["Custom", "Local version or imported pack", "C"],
-      ["Modrinth", "Modpacks, versions and projects", "M"],
-      ["CurseForge", "Modpacks and manifests", "CF"],
-      ["FTB", "Official FTB packs and versions", "FTB"],
-      ["Technic", "Technic platform packs", "T"],
-      ["Import", "ZIP, MRPACK or local folder", "↥"],
+      ["Custom", "Local version or imported pack", "custom"],
+      ["Modrinth", "Modpacks, versions and projects", "modrinth"],
+      ["CurseForge", "Modpacks and manifests", "curseforge"],
+      ["FTB", "Official FTB packs and versions", "ftb"],
+      ["Technic", "Technic platform packs", "technic"],
+      ["Import", "ZIP, MRPACK or local folder", "import"],
     ];
     workspace.innerHTML = `
       <section class="page">
         <div class="page-heading"><div><p class="eyebrow">Instance builder</p><h1>Create an instance</h1><p class="lead">Choose a source, version and loader. The complete installer remains powered by Cloudy’s native task pipeline.</p></div>${shellButton("Back to library", "home", "quiet")}</div>
         <div class="flow-layout">
-          <div class="feature-panel"><div class="tools-row"><h2>Choose a source</h2><span class="subtle">All providers</span></div><div class="provider-list">${providers.map(([name, detail, mark]) => `<button class="provider-card" data-action="open-new"><span class="provider-logo">${mark}</span><span><strong>${name}</strong><small>${detail}</small></span></button>`).join("")}</div><div class="selection-cloud-anchor"><svg class="cloud-anchor-icon" viewBox="0 0 96 48" aria-hidden="true"><path d="M18 38h55c9 0 16-6 16-14 0-7-6-13-14-14C72 4 65 0 57 0c-8 0-15 5-17 12C30 11 22 16 22 23c-7 0-12 4-12 8 0 4 3 7 8 7Z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 38h55" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg><span>Cloudy keeps your source, version and loader choice together.</span></div><div class="native-handoff"><span>Open the complete version, loader and installer flow.</span>${shellButton("Open builder", "open-new", "primary")}</div></div>
+          <div class="feature-panel"><div class="tools-row"><h2>Choose a source</h2><span class="subtle">All providers</span></div><div class="provider-list">${providers.map(([name, detail, icon]) => `<button class="provider-card" data-action="open-new"><span class="provider-logo provider-${icon}"><img src="${providerIconSources[icon]}" alt=""></span><span><strong>${name}</strong><small>${detail}</small></span></button>`).join("")}</div><div class="selection-cloud-anchor"><svg class="cloud-anchor-icon" viewBox="0 0 96 48" aria-hidden="true"><path d="M18 38h55c9 0 16-6 16-14 0-7-6-13-14-14C72 4 65 0 57 0c-8 0-15 5-17 12C30 11 22 16 22 23c-7 0-12 4-12 8 0 4 3 7 8 7Z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 38h55" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg><span>Cloudy keeps your source, version and loader choice together.</span></div><div class="native-handoff"><span>Open the complete version, loader and installer flow.</span>${shellButton("Open builder", "open-new", "primary")}</div></div>
           <aside class="side-panel"><p class="eyebrow">Included</p><h2>Versions</h2><p class="subtle">Release, snapshot, beta and experimental channels are available in the native builder.</p><div class="callout">No authentication bypass is introduced. Microsoft OAuth and existing account handling remain native and secure.</div></aside>
         </div>
       </section>`;
@@ -128,7 +136,7 @@
     workspace.innerHTML = `
       <section class="page"><div class="page-heading"><div><p class="eyebrow">Resource workspace</p><h1>Mods & resources</h1><p class="lead">Search and install mods through the existing Modrinth, CurseForge and local resource workflows.</p></div>${shellButton("Back to library", "home", "quiet")}</div>
       <div class="hero-strip"><div class="hero-panel"><p class="eyebrow">Selected instance</p><h2>${selected ? escapeHtml(selected.name) : "No instance selected"}</h2><p class="lead">Select an instance from Library, then open its real mod page with filters, versions and install tasks.</p>${selected ? shellButton("Open native mod workspace", "open-mods", "primary") : shellButton("Choose an instance", "home", "quiet")}</div><div class="side-panel"><span>Sources</span><strong>3+</strong><span>Modrinth · CurseForge · local files</span></div></div>
-      <div class="flow-layout"><div class="feature-panel"><div class="tools-row"><h2>Install source</h2><span class="subtle">Task-backed</span></div><div class="provider-list"><button class="provider-card" data-action="open-mods"><span class="provider-logo">M</span><span><strong>Modrinth</strong><small>Search projects and versions</small></span></button><button class="provider-card" data-action="open-mods"><span class="provider-logo">CF</span><span><strong>CurseForge</strong><small>Use existing package metadata</small></span></button></div></div><aside class="side-panel"><p class="eyebrow">Drop zone</p><h2>Drag & drop</h2><p class="subtle">Drop .jar, .zip or image resources into the native page to keep file validation and install tasks intact.</p></aside></div></section>`;
+      <div class="flow-layout"><div class="feature-panel"><div class="tools-row"><h2>Install source</h2><span class="subtle">Task-backed</span></div><div class="provider-list"><button class="provider-card" data-action="open-mods"><span class="provider-logo provider-modrinth"><img src="data:image/svg+xml;base64,CLOUDY_PROVIDER_MODRINTH" alt=""></span><span><strong>Modrinth</strong><small>Search projects and versions</small></span></button><button class="provider-card" data-action="open-mods"><span class="provider-logo provider-curseforge"><img src="data:image/svg+xml;base64,CLOUDY_PROVIDER_CURSEFORGE" alt=""></span><span><strong>CurseForge</strong><small>Use existing package metadata</small></span></button></div></div><aside class="side-panel"><p class="eyebrow">Drop zone</p><h2>Drag & drop</h2><p class="subtle">Drop .jar, .zip or image resources into the native page to keep file validation and install tasks intact.</p></aside></div></section>`;
   };
 
   const renderFiles = ({ instances }) => {
@@ -151,10 +159,13 @@
       <div class="settings-grid"><nav class="settings-nav"><button class="is-active" type="button">General</button><button type="button">Appearance</button><button type="button">Minecraft</button><button type="button">Java</button><button type="button">Services</button><button type="button">Proxy</button></nav><div class="settings-panel"><div class="setting-line"><div><strong>Cloudy workspace</strong><small>Keep pages in one connected frame</small></div><button class="toggle is-on" aria-label="Cloudy workspace enabled"></button></div><div class="setting-line"><div><strong>Custom themes</strong><small>Use the existing ThemeManager and user theme files</small></div><button class="toggle is-on" aria-label="Custom themes enabled"></button></div><div class="setting-line"><div><strong>Quiet motion</strong><small>Subtle cloud particles, reduced when system motion is limited</small></div><button class="toggle is-on" aria-label="Quiet motion enabled"></button></div><div class="native-handoff"><span>Advanced and provider-specific settings open in the full native page.</span>${shellButton("Open settings", "open-settings", "quiet")}</div></div></div></section>`;
   };
 
-  const renderSkins = () => {
+  const renderSkins = ({ hasAccount }) => {
+    const action = hasAccount ? "open-skins" : "open-accounts";
+    const actionLabel = hasAccount ? "Open Skin Studio" : "Connect Microsoft account";
+    const subtitle = hasAccount ? "Preview, import and manage skins with the existing 3D model, cape and account workflow." : "Connect a Microsoft account first to use the secure skin and cape workflow.";
     workspace.innerHTML = `
-      <section class="page"><div class="page-heading"><div><p class="eyebrow">Appearance</p><h1>Skin Studio</h1><p class="lead">Preview, import and manage skins with the existing 3D model, cape and account workflow.</p></div>${shellButton("Open Skin Studio", "open-skins", "primary")}</div>
-      <div class="skin-grid"><div class="skin-preview"><div class="skin-cloud" aria-hidden="true"></div></div><div class="feature-panel"><p class="eyebrow">Cloud-ready appearance</p><h2>A calmer way to manage your look.</h2><p class="lead">Import a file, fetch by nickname or use a direct URL. The native preview remains responsible for model and cape rendering.</p><div class="native-handoff"><span>Open full preview and import controls.</span>${shellButton("Open Skin Studio", "open-skins", "primary")}</div></div></div></section>`;
+      <section class="page"><div class="page-heading"><div><p class="eyebrow">Appearance</p><h1>Skin Studio</h1><p class="lead">${subtitle}</p></div>${shellButton(actionLabel, action, "primary")}</div>
+      <div class="skin-grid"><div class="skin-preview"><div class="skin-cloud" aria-hidden="true"></div></div><div class="feature-panel"><p class="eyebrow">Cloud-ready appearance</p><h2>A calmer way to manage your look.</h2><p class="lead">Import a file, fetch by nickname or use a direct URL. The native preview remains responsible for model and cape rendering.</p><div class="native-handoff"><span>${hasAccount ? "Open full preview and import controls." : "Licensed skin controls stay behind Microsoft OAuth."}</span>${shellButton(actionLabel, action, "primary")}</div></div></div></section>`;
   };
 
   function render() {
@@ -165,7 +176,7 @@
     else if (route === "files") renderFiles(currentState);
     else if (route === "accounts") renderAccounts(currentState);
     else if (route === "settings") renderSettings();
-    else if (route === "skins") renderSkins();
+    else if (route === "skins") renderSkins(currentState);
     else renderHome(currentState);
 
     profileName.textContent = currentState.hasAccount ? currentState.account : "No account";

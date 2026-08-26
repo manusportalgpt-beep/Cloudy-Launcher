@@ -4,8 +4,15 @@
     <file>app.css</file>
     <file>app.js</file>
     <file>qwebchannel.js</file>
+    <file>cloudy-icon.png</file>
     <file>cloudy-mark.svg</file>
     <file>cloudy-cloud.svg</file>
     <file>cloud-art.png</file>
+    <file>providers/custom.svg</file>
+    <file>providers/curseforge.svg</file>
+    <file>providers/ftb.svg</file>
+    <file>providers/import.svg</file>
+    <file>providers/modrinth.svg</file>
+    <file>providers/technic.svg</file>
   </qresource>
 </RCC>
