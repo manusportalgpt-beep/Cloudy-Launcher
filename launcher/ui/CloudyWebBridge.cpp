@@ -17,6 +17,7 @@
 #include "MainWindow.h"
 
 #include <QApplication>
+#include <QBuffer>
 #include <QColor>
 #include <QMetaObject>
 #include <QPalette>
@@ -46,6 +47,41 @@ QVariantList CloudyWebBridge::instances() const
         item.insert(QStringLiteral("managed"), instance->isManagedPack());
         item.insert(QStringLiteral("managedType"), instance->getManagedPackType());
         item.insert(QStringLiteral("managedVersion"), instance->getManagedPackVersionName());
+        result.push_back(item);
+    }
+    return result;
+}
+
+QVariantList CloudyWebBridge::accounts() const
+{
+    QVariantList result;
+    if (!APPLICATION || !APPLICATION->accounts())
+        return result;
+
+    const auto* list = APPLICATION->accounts();
+    result.reserve(list->count());
+    for (int i = 0; i < list->count(); ++i) {
+        const auto account = list->at(i);
+        if (!account)
+            continue;
+
+        QVariantMap item;
+        item.insert(QStringLiteral("id"), account->internalId());
+        item.insert(QStringLiteral("name"), account->displayName());
+        item.insert(QStringLiteral("profileName"), account->profileName());
+        item.insert(QStringLiteral("uuid"), account->profileId());
+        item.insert(QStringLiteral("type"), account->typeString());
+        item.insert(QStringLiteral("active"), account->isActive());
+        item.insert(QStringLiteral("ownsMinecraft"), account->ownsMinecraft());
+        item.insert(QStringLiteral("hasProfile"), account->hasProfile());
+
+        if (account->hasProfile()) {
+            QByteArray faceBytes;
+            QBuffer buffer(&faceBytes);
+            buffer.open(QIODevice::WriteOnly);
+            account->getFace(64, 64).save(&buffer, "PNG");
+            item.insert(QStringLiteral("face"), QStringLiteral("data:image/png;base64,") + QString::fromLatin1(faceBytes.toBase64()));
+        }
         result.push_back(item);
     }
     return result;

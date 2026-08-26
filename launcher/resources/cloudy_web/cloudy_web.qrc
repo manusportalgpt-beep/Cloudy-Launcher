@@ -10,9 +10,13 @@
     <file>cloud-art.png</file>
     <file>providers/custom.svg</file>
     <file>providers/curseforge.svg</file>
+    <file>providers/curseforge.png</file>
     <file>providers/ftb.svg</file>
+    <file>providers/ftb.png</file>
     <file>providers/import.svg</file>
     <file>providers/modrinth.svg</file>
+    <file>providers/modrinth.png</file>
     <file>providers/technic.svg</file>
+    <file>providers/technic.png</file>
   </qresource>
 </RCC>

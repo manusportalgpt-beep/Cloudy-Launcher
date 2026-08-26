@@ -34,6 +34,7 @@ class CloudyWebBridge : public QObject {
     Q_OBJECT
     Q_PROPERTY(QString activeAccount READ activeAccount NOTIFY stateChanged)
     Q_PROPERTY(bool hasActiveAccount READ hasActiveAccount NOTIFY stateChanged)
+    Q_PROPERTY(QVariantList accountData READ accounts NOTIFY stateChanged)
     Q_PROPERTY(QVariantList instanceData READ instances NOTIFY stateChanged)
     Q_PROPERTY(QVariantMap paletteData READ paletteData NOTIFY stateChanged)
 
@@ -41,6 +42,7 @@ class CloudyWebBridge : public QObject {
     explicit CloudyWebBridge(MainWindow* window, QObject* parent = nullptr);
 
     Q_INVOKABLE QVariantList instances() const;
+    Q_INVOKABLE QVariantList accounts() const;
     Q_INVOKABLE QString activeAccount() const;
     Q_INVOKABLE bool hasActiveAccount() const;
     Q_INVOKABLE QVariantMap paletteData() const;

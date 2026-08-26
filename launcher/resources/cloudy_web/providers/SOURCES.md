@@ -8,3 +8,7 @@ The `custom.svg`, `modrinth.svg`, `ftb.svg`, `technic.svg`, and `import.svg` fil
 ## Provider references
 
 The real native provider workflows remain associated with their official sites: Modrinth (`https://modrinth.com/`), CurseForge (`https://www.curseforge.com/`), Feed The Beast (`https://feed-the-beast.com/`), and Technic (`https://www.technicpack.net/`). These URLs were consulted for provider identity only; their logos were not copied into Cloudy except for the separate Simple Icons CurseForge asset noted above.
+
+## Owner-supplied PNG references
+
+`modrinth.png`, `curseforge.png`, `ftb.png`, and `technic.png` were derived from image references supplied by the project owner in this task, at the owner’s direction. The cleanup only removes the surrounding background and crops excess pixels; it does not assert ownership of the provider marks. The marks remain subject to their respective trademark and usage terms, and can be replaced with the neutral SVG symbols if redistribution permission is not available.

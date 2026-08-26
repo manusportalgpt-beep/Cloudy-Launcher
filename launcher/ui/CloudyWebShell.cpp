@@ -53,7 +53,11 @@ QString buildCloudyDocument()
     const QByteArray cloudArt = readCloudyResource(QStringLiteral(":/cloudy-web/cloud-art.png")).toBase64();
     const QByteArray cloudyIcon = readCloudyResource(QStringLiteral(":/cloudy-web/cloudy-icon.png")).toBase64();
     const auto providerIcon = [](const QString& name) {
-        return readCloudyResource(QStringLiteral(":/cloudy-web/providers/") + name + QStringLiteral(".svg")).toBase64();
+        const auto extension = name == QStringLiteral("modrinth") || name == QStringLiteral("curseforge") || name == QStringLiteral("ftb")
+                                   || name == QStringLiteral("technic")
+                               ? QStringLiteral(".png")
+                               : QStringLiteral(".svg");
+        return readCloudyResource(QStringLiteral(":/cloudy-web/providers/") + name + extension).toBase64();
     };
 
     html.replace("CLOUDY_CLOUD_ART", cloudArt);
