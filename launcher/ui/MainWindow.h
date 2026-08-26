@@ -257,6 +257,7 @@ class MainWindow : public QMainWindow {
     QLabel* m_instanceMeta = nullptr;
     QLabel* m_workspaceTitle = nullptr;
     QLabel* m_workspaceSubtitle = nullptr;
+    QLabel* m_cloudyRunningStatus = nullptr;
     QWidget* m_cloudyWorkspace = nullptr;
     QWidget* m_cloudyHeader = nullptr;
     QWidget* m_cloudyDetail = nullptr;

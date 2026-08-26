@@ -58,9 +58,11 @@
 
 QRect cloudyEmptyStateRect(const QRect& bounds)
 {
-    const int width = qMax(220, qMin(620, bounds.width() - 48));
-    const int height = qMax(150, qMin(190, bounds.height() - 48));
-    return QRect((bounds.width() - width) / 2, (bounds.height() - height) / 2, width, height);
+    const int width = qMin(156, qMax(132, bounds.width() - 16));
+    const int height = qMin(210, qMax(172, bounds.height() - 16));
+    // The reference keeps the add tile anchored to the content origin instead
+    // of turning the empty state into a centered dialog-like panel.
+    return QRect(0, 8, width, height);
 }
 
 template <typename T>
@@ -492,37 +494,20 @@ void InstanceView::paintEvent([[maybe_unused]] QPaintEvent* event)
             return;
         }
 
-        const QColor foreground = palette().color(QPalette::WindowText);
-        const QColor secondary = palette().color(QPalette::Mid);
-        painter.setBrush(Qt::NoBrush);
-        QPen border(palette().color(QPalette::Mid), 1);
-        border.setStyle(Qt::DashLine);
-        painter.setPen(border);
-        painter.drawRoundedRect(tile, 12.0, 12.0);
+        const QColor tileBackground = palette().color(QPalette::Light);
+        const QColor border = palette().color(QPalette::Mid);
+        painter.setBrush(tileBackground);
+        painter.setPen(QPen(border, 1));
+        painter.drawRoundedRect(tile.adjusted(1, 1, -1, -1), 11.0, 11.0);
 
-        const QPoint center(tile.center().x(), tile.top() + 38);
-        QPen plusPen(palette().color(QPalette::Highlight));
-        plusPen.setWidth(2);
+        const QPoint center = tile.center();
+        QPen plusPen(palette().color(QPalette::Dark));
+        plusPen.setWidth(3);
         plusPen.setCapStyle(Qt::RoundCap);
         painter.setPen(plusPen);
-        painter.drawLine(center.x() - 12, center.y(), center.x() + 12, center.y());
-        painter.drawLine(center.x(), center.y() - 12, center.x(), center.y() + 12);
-
-        QFont titleFont = font();
-        titleFont.setBold(true);
-        titleFont.setPointSizeF(titleFont.pointSizeF() + 1.5);
-        painter.setFont(titleFont);
-        painter.setPen(foreground);
-        painter.drawText(QRect(tile.left() + 20, tile.top() + 68, tile.width() - 40, 28), Qt::AlignHCenter,
-                         tr("Welcome to Cloudy Launcher"));
-
-        QFont bodyFont = font();
-        bodyFont.setPointSizeF(qMax(9.0, bodyFont.pointSizeF() - 0.5));
-        painter.setFont(bodyFont);
-        painter.setPen(secondary);
-        painter.drawText(QRect(tile.left() + 20, tile.top() + 102, tile.width() - 40, 42),
-                         Qt::AlignHCenter | Qt::TextWordWrap,
-                         tr("Create your first Minecraft instance to get started."));
+        painter.drawEllipse(center, 24, 24);
+        painter.drawLine(center.x() - 13, center.y(), center.x() + 13, center.y());
+        painter.drawLine(center.x(), center.y() - 13, center.x(), center.y() + 13);
 
         painter.restore();
         return;

@@ -68,6 +68,7 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPainter>
 #include <QProgressDialog>
 #include <QShortcut>
 #include <QStatusBar>
@@ -141,6 +142,72 @@
 #include "MMCTime.h"
 
 namespace {
+QIcon cloudBrandIcon(const QColor& color)
+{
+    QPixmap pixmap(20, 20);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setPen(QPen(color, 1.5, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawEllipse(QRectF(3, 9, 8, 6));
+    painter.drawEllipse(QRectF(7, 6, 8, 8));
+    painter.drawEllipse(QRectF(12, 9, 5, 6));
+    painter.drawLine(QPointF(5, 15), QPointF(15, 15));
+    painter.end();
+    return QIcon(pixmap);
+}
+
+QIcon cloudNavIcon(int kind, const QColor& color)
+{
+    QPixmap pixmap(20, 20);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setPen(QPen(color, 1.6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter.setBrush(Qt::NoBrush);
+
+    switch (kind) {
+        case 0: {  // home / library
+            QPolygonF roof;
+            roof << QPointF(3, 9) << QPointF(10, 3) << QPointF(17, 9);
+            painter.drawPolyline(roof);
+            painter.drawLine(QPointF(5, 8), QPointF(5, 17));
+            painter.drawLine(QPointF(15, 8), QPointF(15, 17));
+            painter.drawLine(QPointF(5, 17), QPointF(15, 17));
+            painter.drawLine(QPointF(8, 17), QPointF(8, 12));
+            painter.drawLine(QPointF(8, 12), QPointF(12, 12));
+            painter.drawLine(QPointF(12, 12), QPointF(12, 17));
+            break;
+        }
+        case 1:  // create
+            painter.drawEllipse(QPointF(10, 10), 7, 7);
+            painter.drawLine(QPointF(10, 6), QPointF(10, 14));
+            painter.drawLine(QPointF(6, 10), QPointF(14, 10));
+            break;
+        case 2:  // accounts
+            painter.drawEllipse(QPointF(10, 6), 3, 3);
+            painter.drawArc(QRectF(4, 10, 12, 9), 0, 180 * 16);
+            break;
+        case 3:  // settings
+            painter.drawLine(QPointF(4, 5), QPointF(16, 5));
+            painter.drawLine(QPointF(4, 10), QPointF(16, 10));
+            painter.drawLine(QPointF(4, 15), QPointF(16, 15));
+            painter.drawEllipse(QPointF(8, 5), 1.4, 1.4);
+            painter.drawEllipse(QPointF(13, 10), 1.4, 1.4);
+            painter.drawEllipse(QPointF(7, 15), 1.4, 1.4);
+            break;
+        default:  // skin studio / appearance
+            painter.drawRoundedRect(QRectF(5, 3, 10, 14), 2, 2);
+            painter.drawLine(QPointF(8, 7), QPointF(12, 7));
+            painter.drawLine(QPointF(8, 10), QPointF(12, 10));
+            painter.drawLine(QPointF(8, 13), QPointF(11, 13));
+            break;
+    }
+    painter.end();
+    return QIcon(pixmap);
+}
+
 QString profileInUseFilter(const QString& profile, bool used)
 {
     if (used) {
@@ -170,69 +237,70 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     m_cloudyHeader = new QFrame(m_cloudyWorkspace);
     m_cloudyHeader->setObjectName(QStringLiteral("cloudyHeader"));
+    m_cloudyHeader->setFixedHeight(38);
     auto* headerLayout = new QHBoxLayout(m_cloudyHeader);
-    headerLayout->setContentsMargins(20, 16, 20, 16);
-    headerLayout->setSpacing(10);
+    headerLayout->setContentsMargins(8, 0, 8, 0);
+    headerLayout->setSpacing(5);
 
     auto* headerBrand = new QLabel(m_cloudyHeader);
     headerBrand->setObjectName(QStringLiteral("cloudyHeaderBrand"));
-    headerBrand->setPixmap(APPLICATION->logo().pixmap(QSize(38, 38)));
+    headerBrand->setPixmap(cloudBrandIcon(palette().color(QPalette::Text)).pixmap(QSize(20, 20)));
+    headerBrand->setFixedSize(20, 20);
     headerLayout->addWidget(headerBrand, 0, Qt::AlignVCenter);
 
-    auto* headerIdentity = new QVBoxLayout();
-    headerIdentity->setSpacing(1);
     auto* headerName = new QLabel(tr("Cloudy Launcher"), m_cloudyHeader);
     headerName->setObjectName(QStringLiteral("cloudyHeaderName"));
-    auto* headerTagline = new QLabel(tr("A calm workspace for your Minecraft instances"), m_cloudyHeader);
-    headerTagline->setObjectName(QStringLiteral("cloudyHeaderTagline"));
-    headerIdentity->addWidget(headerName);
-    headerIdentity->addWidget(headerTagline);
-    headerLayout->addLayout(headerIdentity);
-    headerLayout->addSpacing(28);
+    headerLayout->addWidget(headerName, 0, Qt::AlignVCenter);
 
-    auto* contextLayout = new QVBoxLayout();
-    contextLayout->setSpacing(1);
-    m_workspaceTitle = new QLabel(tr("Library"), m_cloudyHeader);
-    m_workspaceTitle->setObjectName(QStringLiteral("cloudyWorkspaceTitle"));
-    m_workspaceSubtitle = new QLabel(tr("Your instances and worlds"), m_cloudyHeader);
-    m_workspaceSubtitle->setObjectName(QStringLiteral("cloudyWorkspaceSubtitle"));
-    contextLayout->addWidget(m_workspaceTitle);
-    contextLayout->addWidget(m_workspaceSubtitle);
-    headerLayout->addLayout(contextLayout);
-    headerLayout->addStretch(1);
-
-    const auto makeHeaderButton = [this](QAction* action, const QString& objectName) {
+    auto makeHeaderNavigationButton = [this](const QIcon& icon, const QString& tooltip) {
         auto* button = new QToolButton(m_cloudyHeader);
-        button->setDefaultAction(action);
-        button->setObjectName(objectName);
-        button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-        button->setAutoRaise(false);
-        button->setMinimumHeight(34);
+        button->setIcon(icon);
+        button->setToolTip(tooltip);
+        button->setAccessibleName(tooltip);
+        button->setObjectName(QStringLiteral("cloudyHeaderNavigation"));
+        button->setAutoRaise(true);
+        button->setFixedSize(24, 24);
         return button;
     };
-    headerLayout->addWidget(makeHeaderButton(ui->actionAddInstance, QStringLiteral("cloudyHeaderPrimary")));
-    headerLayout->addWidget(makeHeaderButton(ui->actionFoldersButton, QStringLiteral("cloudyHeaderButton")));
-    headerLayout->addWidget(makeHeaderButton(ui->actionHelpButton, QStringLiteral("cloudyHeaderButton")));
-    headerLayout->addWidget(makeHeaderButton(ui->actionCheckUpdate, QStringLiteral("cloudyHeaderButton")));
-    auto* headerAccountButton = makeHeaderButton(ui->actionAccountsButton, QStringLiteral("cloudyAccountButton"));
-    headerAccountButton->setPopupMode(QToolButton::MenuButtonPopup);
-    headerLayout->addWidget(headerAccountButton);
+    headerLayout->addSpacing(8);
+    auto* backButton = makeHeaderNavigationButton(QIcon::fromTheme(QStringLiteral("go-previous")), tr("Back to Library"));
+    connect(backButton, &QToolButton::clicked, this, &MainWindow::restoreMainContent);
+    headerLayout->addWidget(backButton);
+    auto* forwardButton = makeHeaderNavigationButton(QIcon::fromTheme(QStringLiteral("go-next")), tr("Forward"));
+    forwardButton->setEnabled(false);
+    headerLayout->addWidget(forwardButton);
+
+    auto* breadcrumbSeparator = new QLabel(QStringLiteral("/"), m_cloudyHeader);
+    breadcrumbSeparator->setObjectName(QStringLiteral("cloudyBreadcrumbSeparator"));
+    headerLayout->addWidget(breadcrumbSeparator, 0, Qt::AlignVCenter);
+    m_workspaceTitle = new QLabel(tr("Home"), m_cloudyHeader);
+    m_workspaceTitle->setObjectName(QStringLiteral("cloudyWorkspaceTitle"));
+    headerLayout->addWidget(m_workspaceTitle, 0, Qt::AlignVCenter);
+    m_workspaceSubtitle = nullptr;
+
+    headerLayout->addStretch(1);
+    m_cloudyRunningStatus = new QLabel(tr("No instances is currently running"), m_cloudyHeader);
+    m_cloudyRunningStatus->setObjectName(QStringLiteral("cloudyRunningStatus"));
+    m_cloudyRunningStatus->setAlignment(Qt::AlignCenter);
+    m_cloudyRunningStatus->setMinimumWidth(210);
+    headerLayout->addWidget(m_cloudyRunningStatus, 0, Qt::AlignVCenter);
+    headerLayout->addStretch(1);
 
     workspaceLayout->addWidget(m_cloudyHeader);
 
     auto* workspaceBody = new QWidget(m_cloudyWorkspace);
     workspaceBody->setObjectName(QStringLiteral("cloudyWorkspaceBody"));
     auto* bodyLayout = new QHBoxLayout(workspaceBody);
-    bodyLayout->setContentsMargins(20, 18, 20, 18);
-    bodyLayout->setSpacing(20);
+    bodyLayout->setContentsMargins(0, 0, 0, 0);
+    bodyLayout->setSpacing(0);
 
     m_cloudySidebar = new QFrame(workspaceBody);
     m_cloudySidebar->setObjectName(QStringLiteral("cloudyWorkspaceNav"));
-    m_cloudySidebar->setMinimumWidth(176);
-    m_cloudySidebar->setMaximumWidth(196);
+    m_cloudySidebar->setMinimumWidth(54);
+    m_cloudySidebar->setMaximumWidth(54);
     auto* navigationLayout = new QVBoxLayout(m_cloudySidebar);
-    navigationLayout->setContentsMargins(10, 14, 10, 14);
-    navigationLayout->setSpacing(6);
+    navigationLayout->setContentsMargins(6, 8, 6, 8);
+    navigationLayout->setSpacing(8);
     bodyLayout->addWidget(m_cloudySidebar);
 
     m_contentStack = new QStackedWidget(workspaceBody);
@@ -256,6 +324,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     m_statusCenter->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     footerLayout->addWidget(m_statusLeft, 1);
     footerLayout->addWidget(m_statusCenter, 0);
+    m_cloudyFooter->setVisible(false);
     workspaceLayout->addWidget(m_cloudyFooter);
 
     setCentralWidget(m_cloudyWorkspace);
@@ -270,38 +339,36 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     const auto makeNavButton = [this, navigationLayout](const QString& label, const QString& objectName, const QIcon& icon) {
         auto* button = new QToolButton(m_cloudySidebar);
         button->setObjectName(objectName);
-        button->setText(label);
+        button->setToolTip(label);
+        button->setAccessibleName(label);
         button->setIcon(icon);
-        button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        button->setToolButtonStyle(Qt::ToolButtonIconOnly);
         button->setCheckable(true);
         button->setAutoRaise(true);
-        button->setMinimumHeight(42);
-        button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        button->setFixedSize(40, 40);
+        button->setIconSize(QSize(20, 20));
         m_cloudyNavGroup->addButton(button);
-        navigationLayout->addWidget(button);
+        navigationLayout->addWidget(button, 0, Qt::AlignHCenter);
         return button;
     };
 
-    m_libraryNavButton = makeNavButton(tr("Library"), QStringLiteral("cloudyNavLibrary"), QIcon::fromTheme(QStringLiteral("instances")));
+    const auto railColor = palette().color(QPalette::Text);
+    m_libraryNavButton = makeNavButton(tr("Library"), QStringLiteral("cloudyNavLibrary"), cloudNavIcon(0, railColor));
     m_libraryNavButton->setChecked(true);
     connect(m_libraryNavButton, &QToolButton::clicked, this, &MainWindow::restoreMainContent);
 
-    auto* addNavButton = makeNavButton(tr("New instance"), QStringLiteral("cloudyNavAdd"), ui->actionAddInstance->icon());
+    auto* addNavButton = makeNavButton(tr("New instance"), QStringLiteral("cloudyNavAdd"), cloudNavIcon(1, railColor));
     connect(addNavButton, &QToolButton::clicked, this, &MainWindow::on_actionAddInstance_triggered);
-    auto* accountNavButton = makeNavButton(tr("Accounts"), QStringLiteral("cloudyNavAccounts"), ui->actionManageAccounts->icon());
+    auto* accountNavButton = makeNavButton(tr("Accounts"), QStringLiteral("cloudyNavAccounts"), cloudNavIcon(2, railColor));
     connect(accountNavButton, &QToolButton::clicked, ui->actionManageAccounts, &QAction::trigger);
-    auto* settingsNavButton = makeNavButton(tr("Settings"), QStringLiteral("cloudyNavSettings"), ui->actionSettings->icon());
+    auto* settingsNavButton = makeNavButton(tr("Settings"), QStringLiteral("cloudyNavSettings"), cloudNavIcon(3, railColor));
     connect(settingsNavButton, &QToolButton::clicked, ui->actionSettings, &QAction::trigger);
-    auto* skinsNavButton = makeNavButton(tr("Skin Studio"), QStringLiteral("cloudyNavSkins"), ui->actionManageSkins->icon());
+    auto* skinsNavButton = makeNavButton(tr("Skin Studio"), QStringLiteral("cloudyNavSkins"), cloudNavIcon(4, railColor));
     connect(skinsNavButton, &QToolButton::clicked, ui->actionManageSkins, &QAction::trigger);
 
     auto* navSpacer = new QWidget(m_cloudySidebar);
     navSpacer->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     navigationLayout->addWidget(navSpacer);
-    auto* navCaption = new QLabel(tr("Cloudy workspace"), m_cloudySidebar);
-    navCaption->setObjectName(QStringLiteral("cloudyNavCaption"));
-    navCaption->setAlignment(Qt::AlignCenter);
-    navigationLayout->addWidget(navCaption);
 
     m_cloudyNotch = nullptr;
     m_toggleCloudyNavigation = nullptr;
@@ -429,7 +496,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         ui->actionAddToPATH->setVisible(false);
 #endif
 
-        // Contextual detail is shown only for an actual Library selection.
+        // Keep the empty Library free of contextual controls; show detail only for a selected instance.
         m_cloudyDetail->setVisible(false);
         m_cloudyDetail->setEnabled(false);
         setInstanceActionsEnabled(false);
@@ -540,15 +607,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         auto* librarySurface = new QWidget(ui->centralWidget);
         librarySurface->setObjectName(QStringLiteral("librarySurface"));
         auto* libraryLayout = new QVBoxLayout(librarySurface);
-        libraryLayout->setContentsMargins(24, 20, 24, 12);
-        libraryLayout->setSpacing(12);
+        libraryLayout->setContentsMargins(48, 22, 48, 16);
+        libraryLayout->setSpacing(10);
 
         auto* libraryHeader = new QHBoxLayout();
         libraryHeader->setSpacing(12);
         auto* libraryHeading = new QVBoxLayout();
-        auto* libraryTitle = new QLabel(tr("Library"), librarySurface);
+        auto* libraryTitle = new QLabel(tr("Greetings!"), librarySurface);
         libraryTitle->setObjectName(QStringLiteral("libraryTitle"));
-        auto* librarySubtitle = new QLabel(tr("Your Minecraft instances"), librarySurface);
+        auto* librarySubtitle = new QLabel(tr("Here are your worlds and servers — enjoy!"), librarySurface);
         librarySubtitle->setObjectName(QStringLiteral("librarySubtitle"));
         libraryHeading->addWidget(libraryTitle);
         libraryHeading->addWidget(librarySubtitle);
@@ -557,17 +624,26 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
         auto* librarySearch = new QLineEdit(librarySurface);
         librarySearch->setObjectName(QStringLiteral("librarySearch"));
-        librarySearch->setPlaceholderText(tr("Search instances..."));
+        librarySearch->setPlaceholderText(tr("Search"));
         librarySearch->setClearButtonEnabled(true);
+        librarySearch->setMaximumWidth(170);
+        librarySearch->setVisible(false);
         connect(librarySearch, &QLineEdit::textChanged, proxymodel, &QSortFilterProxyModel::setFilterFixedString);
-        libraryHeader->addWidget(librarySearch);
+        auto* librarySearchShortcut = new QShortcut(QKeySequence::Find, librarySurface);
+        connect(librarySearchShortcut, &QShortcut::activated, librarySearch, [librarySearch] {
+            librarySearch->setVisible(true);
+            librarySearch->setFocus(Qt::ShortcutFocusReason);
+        });
+        libraryHeader->addWidget(librarySearch, 0, Qt::AlignVCenter);
 
-        auto* createInstanceButton = new QToolButton(librarySurface);
-        createInstanceButton->setText(tr("Create instance"));
-        createInstanceButton->setToolButtonStyle(Qt::ToolButtonTextOnly);
-        createInstanceButton->setObjectName(QStringLiteral("libraryCreateButton"));
-        connect(createInstanceButton, &QToolButton::clicked, ui->actionAddInstance, &QAction::trigger);
-        libraryHeader->addWidget(createInstanceButton);
+        auto* libraryAccountButton = new QToolButton(librarySurface);
+        libraryAccountButton->setDefaultAction(ui->actionAccountsButton);
+        libraryAccountButton->setObjectName(QStringLiteral("cloudyReferenceAccount"));
+        libraryAccountButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        libraryAccountButton->setPopupMode(QToolButton::MenuButtonPopup);
+        libraryAccountButton->setMinimumHeight(44);
+        libraryAccountButton->setMinimumWidth(210);
+        libraryHeader->addWidget(libraryAccountButton, 0, Qt::AlignVCenter);
         libraryLayout->addLayout(libraryHeader);
 
         view->setParent(librarySurface);
@@ -756,7 +832,7 @@ void MainWindow::restoreMainContent()
     m_contentStack->setCurrentWidget(ui->centralWidget);
     if (m_cloudyDetail)
         m_cloudyDetail->setVisible(m_selectedInstance != nullptr);
-    setWorkspaceContext(tr("Library"), tr("Your instances and worlds"), QStringLiteral("cloudyNavLibrary"));
+    setWorkspaceContext(tr("Home"), tr("Your instances and worlds"), QStringLiteral("cloudyNavLibrary"));
     if (m_libraryNavButton)
         m_libraryNavButton->setChecked(true);
 }

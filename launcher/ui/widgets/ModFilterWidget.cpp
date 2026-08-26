@@ -49,9 +49,9 @@
 #include "Application.h"
 #include "minecraft/PackProfile.h"
 
-ModFilterWidget* ModFilterWidget::create(MinecraftInstance* instance, bool extended)
+ModFilterWidget* ModFilterWidget::create(MinecraftInstance* instance, bool extended, bool loadVersions)
 {
-    return new ModFilterWidget(instance, extended);
+    return new ModFilterWidget(instance, extended, loadVersions);
 }
 
 class VersionBasicModel : public QIdentityProxyModel {
@@ -107,7 +107,7 @@ class AllVersionProxyModel : public QSortFilterProxyModel {
     }
 };
 
-ModFilterWidget::ModFilterWidget(MinecraftInstance* instance, bool extended)
+ModFilterWidget::ModFilterWidget(MinecraftInstance* instance, bool extended, bool loadVersions)
     : QTabWidget(), ui(new Ui::ModFilterWidget), m_instance(instance), m_filter(new Filter())
 {
     ui->setupUi(this);
@@ -174,7 +174,8 @@ ModFilterWidget::ModFilterWidget(MinecraftInstance* instance, bool extended)
     connect(ui->unknownCb, &QCheckBox::stateChanged, this, &ModFilterWidget::onReleaseFilterChanged);
 
     setHidden(true);
-    loadVersionList();
+    if (loadVersions)
+        loadVersionList();
     prepareBasicFilter();
 }
 
@@ -187,6 +188,12 @@ auto ModFilterWidget::getFilter() -> std::shared_ptr<Filter>
 ModFilterWidget::~ModFilterWidget()
 {
     delete ui;
+}
+
+void ModFilterWidget::ensureVersionListLoaded()
+{
+    if (!m_version_list)
+        loadVersionList();
 }
 
 void ModFilterWidget::loadVersionList()
