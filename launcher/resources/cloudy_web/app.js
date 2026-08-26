@@ -5,7 +5,6 @@
   const crumb = document.getElementById("crumb");
   const profileName = document.getElementById("profile-name");
   const profileAvatar = document.getElementById("profile-avatar");
-  const runningStatus = document.getElementById("running-status");
   const navButtons = [...document.querySelectorAll(".rail-button[data-route]")];
   let bridge = null;
   let route = "home";
@@ -67,6 +66,8 @@
   };
 
   const renderHome = ({ instances, account, hasAccount }) => {
+    const running = instances.filter((item) => item.running).length;
+    const runningText = running ? `${running} ${running === 1 ? "instance is" : "instances are"} currently running` : "No instances are currently running";
     const cards = instances.map((item) => `
       <article class="instance-card" data-instance-id="${escapeHtml(item.id)}" tabindex="0" aria-label="Open ${escapeHtml(item.name)}">
         <div class="instance-art">
@@ -107,8 +108,8 @@
           </div>
           <div class="side-panel"><span>Active profile</span><strong>${accountText}</strong><span>${instances.length} ${instances.length === 1 ? "instance" : "instances"}</span></div>
         </div>
-        <div class="tools-row"><span class="subtle">Library</span><div class="segmented"><button class="is-active" type="button">Grid</button><button type="button" data-action="refresh">Refresh</button></div></div>
-        ${instances.length ? `<div class="instance-grid" id="instance-grid">${cards}<button class="empty-tile" data-action="new" aria-label="Create a new instance"><span class="empty-plus"></span></button></div>` : `<div class="empty-state"><button class="empty-tile" data-action="new" aria-label="Create a new instance"><span class="empty-plus"></span></button><p class="empty-caption">Your library is clear. Add a Minecraft instance to start shaping your cloud.</p></div>`}
+        <div class="tools-row"><span class="subtle">Library</span><span class="library-status"><span class="status-dot"></span>${runningText}</span><div class="segmented"><button class="is-active" type="button">Grid</button><button type="button" data-action="refresh">Refresh</button></div></div>
+        ${instances.length ? `<div class="instance-grid" id="instance-grid">${cards}</div>` : `<div class="empty-state"><button class="empty-tile" data-action="new" aria-label="Create a new instance"><span class="empty-plus"></span></button><p class="empty-caption">Your library is clear. Add a Minecraft instance to start shaping your cloud.</p></div>`}
       </section>`;
   };
 
@@ -181,8 +182,6 @@
 
     profileName.textContent = currentState.hasAccount ? currentState.account : "No account";
     profileAvatar.textContent = (currentState.account || "C").slice(0, 1).toUpperCase();
-    const running = currentState.instances.filter((item) => item.running).length;
-    runningStatus.textContent = running ? `${running} ${running === 1 ? "instance is" : "instances are"} currently running` : "No instances are currently running";
   }
 
   document.addEventListener("click", (event) => {

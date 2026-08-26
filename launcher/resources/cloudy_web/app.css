@@ -29,11 +29,10 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--white); out
 .brand-lockup { min-width: 0; display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 11px; }
 .brand-mark { width: 25px; height: 25px; display: block; border-radius: 7px; object-fit: cover; background: var(--surface-3); }
 .brand-name { color: var(--text); font-weight: 680; letter-spacing: -.015em; white-space: nowrap; }
-.crumb-separator { color: var(--faint); margin-left: 42px; }
+.crumb-separator { color: var(--faint); margin-left: 0; }
 .crumb { color: var(--muted); white-space: nowrap; }
-.topbar-center { position: absolute; left: 50%; transform: translateX(-50%); }
-.running-pill { height: 27px; min-width: 260px; display: flex; justify-content: center; align-items: center; gap: 8px; color: var(--muted); border: 1px solid var(--line-strong); border-radius: 999px; padding: 0 15px; font-size: 10px; letter-spacing: .01em; background: var(--surface); }
-.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cloud); box-shadow: 0 0 0 3px rgba(201, 211, 220, .07); }
+.status-dot { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: var(--cloud); box-shadow: 0 0 0 3px rgba(201, 211, 220, .07); }
+.library-status { display: inline-flex; align-items: center; gap: 8px; min-width: 0; margin-left: auto; margin-right: 12px; color: var(--muted); font-size: 10px; white-space: nowrap; }
   .profile-pill { width: 226px; min-height: 38px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-2); display: flex; align-items: center; gap: 9px; padding: 5px 10px; cursor: pointer; text-align: left; transition: background .18s ease, border-color .18s ease, transform .18s ease; }
 .profile-pill:hover { background: var(--surface-3); border-color: var(--line-strong); transform: translateY(-1px); }
 .window-controls { display: flex; align-items: center; gap: 2px; margin-left: 4px; cursor: default; }
@@ -61,7 +60,6 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--white); out
 .icon-sliders::before { content: "☷"; position: absolute; inset: -2px 0 0; font-size: 21px; line-height: 19px; transform: rotate(90deg); }
 .icon-skin::before { content: ""; position: absolute; inset: 2px 4px; border: 1.5px solid currentColor; border-radius: 3px; }
 .icon-skin::after { content: ""; position: absolute; left: 7px; top: 6px; width: 5px; height: 1.5px; background: currentColor; box-shadow: 0 4px currentColor, 0 8px currentColor; }
-.icon-refresh::before { content: "↻"; position: absolute; inset: -3px 0 0; font-size: 22px; line-height: 20px; }
 
 .workspace { grid-column: 2; grid-row: 2; min-width: 0; min-height: 0; overflow: auto; padding: 32px 46px 52px; position: relative; z-index: 1; }
 .workspace::-webkit-scrollbar { width: 7px; height: 7px; }
@@ -192,9 +190,9 @@ h2 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
 
 @media (max-width: 860px) {
   .workspace { padding: 24px 28px 42px; }
-  .topbar-center { display: none; }
   .profile-pill { width: 190px; }
-  .crumb-separator { margin-left: 12px; }
+  .crumb-separator { margin-left: 0; }
+  .library-status { display: none; }
   .hero-strip, .flow-layout, .settings-grid, .skin-grid { grid-template-columns: 1fr; }
   .settings-nav { display: grid; grid-template-columns: repeat(2, 1fr); }
 }
