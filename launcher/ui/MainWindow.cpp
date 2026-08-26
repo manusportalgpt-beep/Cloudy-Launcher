@@ -44,6 +44,8 @@
 
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
+#include "ui/CloudyWebBridge.h"
+#include "ui/CloudyWebShell.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -70,13 +72,13 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <QProgressDialog>
+#include <QPointer>
 #include <QShortcut>
 #include <QStatusBar>
 #include <QToolBar>
 #include <QToolButton>
 #include <QTimer>
 #include <QWidget>
-#include <QStackedWidget>
 #include <QWidgetAction>
 #include <memory>
 
@@ -303,10 +305,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     navigationLayout->setSpacing(8);
     bodyLayout->addWidget(m_cloudySidebar);
 
-    m_contentStack = new QStackedWidget(workspaceBody);
-    m_contentStack->setObjectName(QStringLiteral("cloudyContentStack"));
-    m_contentStack->addWidget(ui->centralWidget);
-    bodyLayout->addWidget(m_contentStack, 1);
+    m_cloudyWebShell = new CloudyWebShell(this, workspaceBody);
+    bodyLayout->addWidget(m_cloudyWebShell, 1);
+    connect(APPLICATION->instances(), &InstanceList::instancesChanged, m_cloudyWebShell->bridge(), &CloudyWebBridge::stateChanged);
+    connect(APPLICATION->accounts(), &AccountList::listChanged, m_cloudyWebShell->bridge(), &CloudyWebBridge::stateChanged);
+    connect(APPLICATION->accounts(), &AccountList::listActivityChanged, m_cloudyWebShell->bridge(), &CloudyWebBridge::stateChanged);
+    connect(APPLICATION->accounts(), &AccountList::defaultAccountChanged, m_cloudyWebShell->bridge(), &CloudyWebBridge::stateChanged);
 
     m_cloudyDetail = new QFrame(workspaceBody);
     m_cloudyDetail->setObjectName(QStringLiteral("cloudyDetailCanvas"));
@@ -327,7 +331,17 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     m_cloudyFooter->setVisible(false);
     workspaceLayout->addWidget(m_cloudyFooter);
 
-    setCentralWidget(m_cloudyWorkspace);
+    // The WebEngine shell is the only visible application surface. Keep the
+    // former widget workspace alive but hidden because legacy actions and page
+    // lifecycle callbacks still reference its compatibility objects.
+    bodyLayout->removeWidget(m_cloudyWebShell);
+    m_cloudyWebShell->setParent(this);
+    m_cloudyWorkspace->hide();
+    m_cloudyHeader->hide();
+    m_cloudySidebar->hide();
+    m_cloudyDetail->hide();
+    m_cloudyFooter->hide();
+    setCentralWidget(m_cloudyWebShell);
     ui->mainToolBar->setVisible(false);
     ui->instanceToolBar->setVisible(false);
     ui->newsToolBar->setVisible(false);
@@ -805,37 +819,26 @@ void MainWindow::setWorkspaceContext(const QString& title, const QString& subtit
 
 void MainWindow::showEmbeddedPage(QWidget* page)
 {
-    if (!page || !m_contentStack)
+    if (!page || !m_cloudyWebShell)
         return;
 
-    page->setParent(m_contentStack);
-    page->setObjectName(QStringLiteral("cloudyEmbeddedPage"));
-    page->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    m_contentStack->addWidget(page);
-    m_contentStack->setCurrentWidget(page);
-    qInfo() << "Cloudy embedded page shown:" << page->metaObject()->className() << "stack count" << m_contentStack->count();
+    qInfo() << "Cloudy embedded page shown:" << page->metaObject()->className();
+    m_cloudyWebShell->showNativePage(page);
     if (m_cloudyDetail)
         m_cloudyDetail->setVisible(false);
-    page->show();
 }
 
 void MainWindow::restoreMainContent()
 {
-    if (!m_contentStack)
-        return;
-
-    while (m_contentStack->count() > 1) {
-        QWidget* page = m_contentStack->widget(1);
-        m_contentStack->removeWidget(page);
-        page->deleteLater();
-    }
-    m_contentStack->setCurrentWidget(ui->centralWidget);
+    if (m_cloudyWebShell)
+        m_cloudyWebShell->restoreWebPage();
     if (m_cloudyDetail)
         m_cloudyDetail->setVisible(m_selectedInstance != nullptr);
     setWorkspaceContext(tr("Home"), tr("Your instances and worlds"), QStringLiteral("cloudyNavLibrary"));
     if (m_libraryNavButton)
         m_libraryNavButton->setChecked(true);
 }
+
 
 void MainWindow::setCloudyNavigationMode(bool notch)
 {
@@ -1311,7 +1314,7 @@ void MainWindow::addInstance(const QString& url, const QMap<QString, QString>& e
     // The provider pages include several legacy source initializers. Show a
     // lightweight Cloudy loading surface first, then build those pages after the
     // current event has painted so the old Library canvas is never frozen in place.
-    auto* loadingPage = new QFrame(this);
+    QPointer<QFrame> loadingPage = new QFrame(this);
     loadingPage->setObjectName(QStringLiteral("cloudyLoadingPage"));
     auto* loadingLayout = new QVBoxLayout(loadingPage);
     loadingLayout->setContentsMargins(32, 32, 32, 32);
@@ -1326,10 +1329,10 @@ void MainWindow::addInstance(const QString& url, const QMap<QString, QString>& e
     showEmbeddedPage(loadingPage);
 
     QTimer::singleShot(0, this, [this, groupName, url, extra_info, loadingPage] {
-        if (!m_contentStack || m_contentStack->indexOf(loadingPage) < 0)
+        if (!m_cloudyWebShell || !loadingPage)
             return;
 
-        // Keep the complete existing provider pages, but host the dialog in Cloudy's content stack.
+        // Keep the complete existing provider pages, but host the dialog in Cloudy's web workspace.
         auto* newInstDlg = new NewInstanceDialog(groupName, url, extra_info, this, true);
         connect(newInstDlg, &QDialog::accepted, this, [this, newInstDlg] {
             APPLICATION->settings()->set("LastUsedGroupForNewInstance", newInstDlg->instGroup());
@@ -1341,8 +1344,6 @@ void MainWindow::addInstance(const QString& url, const QMap<QString, QString>& e
         });
         connect(newInstDlg, &QDialog::rejected, this, [this] { restoreMainContent(); });
 
-        m_contentStack->removeWidget(loadingPage);
-        loadingPage->deleteLater();
         showEmbeddedPage(newInstDlg);
     });
 }
@@ -1655,6 +1656,37 @@ void MainWindow::setSelectedInstanceById(const QString& id)
         QModelIndex selectionIndex = proxymodel->mapFromSource(index);
         view->selectionModel()->setCurrentIndex(selectionIndex, QItemSelectionModel::ClearAndSelect);
         updateStatusCenter();
+    }
+}
+
+void MainWindow::webSelectInstance(const QString& id)
+{
+    setSelectedInstanceById(id);
+    if (m_selectedInstance)
+        APPLICATION->settings()->set(QStringLiteral("SelectedInstance"), m_selectedInstance->id());
+}
+
+void MainWindow::webOpenInstancePage(const QString& id, const QString& page)
+{
+    if (!id.isEmpty())
+        webSelectInstance(id);
+    if (!m_selectedInstance)
+        return;
+
+    if (m_selectedInstance->canEdit()) {
+        auto* editor = APPLICATION->showInstanceWindow(m_selectedInstance, page);
+        if (editor) {
+            editor->setWindowFlags(Qt::Widget);
+            editor->setAttribute(Qt::WA_DeleteOnClose, false);
+            connect(editor, &InstanceWindow::isClosing, this, &MainWindow::restoreMainContent, Qt::UniqueConnection);
+            setWorkspaceContext(tr("Instance workspace"), tr("Configure this instance without leaving Cloudy"));
+            showEmbeddedPage(editor);
+        }
+    } else {
+        CustomMessageBox::selectable(this, tr("Instance not editable"),
+                                     tr("This instance is not editable. It may be broken, invalid, or too old. Check logs for details."),
+                                     QMessageBox::Critical)
+            ->show();
     }
 }
 

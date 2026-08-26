@@ -1,0 +1,11 @@
+<RCC>
+  <qresource prefix="/cloudy-web">
+    <file>index.html</file>
+    <file>app.css</file>
+    <file>app.js</file>
+    <file>qwebchannel.js</file>
+    <file>cloudy-mark.svg</file>
+    <file>cloudy-cloud.svg</file>
+    <file>cloud-art.png</file>
+  </qresource>
+</RCC>

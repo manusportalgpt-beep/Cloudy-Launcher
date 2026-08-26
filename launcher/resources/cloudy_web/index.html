@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cloudy Launcher</title>
+  <!-- CLOUDY_CSS -->
+</head>
+<body>
+  <div class="cloudy-app">
+    <header class="topbar">
+      <div class="brand-lockup">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-label="Cloudy Launcher" role="img"><path d="M8.2 23.1h15.6c3.1 0 5.6-2.3 5.6-5.2 0-2.8-2.2-5-5-5.2C23.7 8.4 20.6 5.4 16.7 5.4c-3.7 0-6.8 2.7-7.5 6.3C5.8 11.9 3.2 14.2 3.2 17c0 3.4 2.2 6.1 5 6.1Z" fill="none" stroke="#f3f5f7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 23.1h15.7" fill="none" stroke="#aeb6c0" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span class="brand-name">Cloudy Launcher</span>
+        <span class="crumb-separator">/</span>
+        <span class="crumb" id="crumb">Home</span>
+      </div>
+      <div class="topbar-center">
+        <div class="running-pill"><span class="status-dot"></span><span id="running-status">No instances are currently running</span></div>
+      </div>
+      <button class="profile-pill" data-action="accounts" aria-label="Open accounts">
+        <span class="profile-avatar" id="profile-avatar">C</span>
+        <span class="profile-copy"><strong id="profile-name">No account</strong><small id="profile-subtitle">Minecraft account</small></span>
+        <span class="chevron">⌄</span>
+      </button>
+    </header>
+
+    <aside class="rail" aria-label="Cloudy navigation">
+      <button class="rail-button is-active" data-route="home" title="Library" aria-label="Library"><span class="icon icon-home"></span></button>
+      <button class="rail-button" data-route="new" title="Create instance" aria-label="Create instance"><span class="icon icon-plus"></span></button>
+      <button class="rail-button" data-route="accounts" title="Accounts" aria-label="Accounts"><span class="icon icon-person"></span></button>
+      <button class="rail-button" data-route="settings" title="Settings" aria-label="Settings"><span class="icon icon-sliders"></span></button>
+      <button class="rail-button" data-route="skins" title="Skin Studio" aria-label="Skin Studio"><span class="icon icon-skin"></span></button>
+      <span class="rail-spacer"></span>
+      <button class="rail-button" data-action="refresh" title="Refresh library" aria-label="Refresh library"><span class="icon icon-refresh"></span></button>
+    </aside>
+
+    <main class="workspace" id="workspace" aria-live="polite"></main>
+    <div class="ambient-cloud cloud-one" aria-hidden="true"><img class="ambient-art" src="data:image/png;base64,CLOUDY_CLOUD_ART" alt=""></div>
+    <div class="ambient-cloud cloud-two" aria-hidden="true"><img class="ambient-art" src="data:image/png;base64,CLOUDY_CLOUD_ART" alt=""></div>
+  </div>
+  <!-- CLOUDY_WEBCHANNEL_JS -->
+  <!-- CLOUDY_APP_JS -->
+</body>
+</html>

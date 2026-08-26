@@ -88,6 +88,7 @@
 
 #include <QAccessible>
 #include <QCommandLineParser>
+#include <QCoreApplication>
 #include <QDebug>
 #include <QElapsedTimer>
 #include <QDir>
@@ -1546,6 +1547,9 @@ JavaInstallList* Application::javalist()
 
 QIcon Application::logo()
 {
+    const QIcon cloudyMark(QStringLiteral(":/cloudy-web/cloudy-mark.svg"));
+    if (!cloudyMark.isNull())
+        return cloudyMark;
     return QIcon(":/" + BuildConfig.LAUNCHER_SVGFILENAME);
 }
 
@@ -1682,10 +1686,13 @@ void Application::controllerFinished()
     extras.controller.reset();
     subRunningInstance();
 
-    // quit when there are no more windows.
-    if (shouldExitNow()) {
+    // Quit on the next event turn so WebEngine/task callbacks are not
+    // destroyed from inside the launch completion signal.
+    if (shouldExitNow() && !m_quitRequested) {
         m_status = wasSuccessful ? Succeeded : Failed;
-        exit(wasSuccessful ? 0 : 1);
+        m_quitRequested = true;
+        const int exitCode = wasSuccessful ? 0 : 1;
+        QMetaObject::invokeMethod(this, [exitCode] { QCoreApplication::exit(exitCode); }, Qt::QueuedConnection);
     }
 }
 

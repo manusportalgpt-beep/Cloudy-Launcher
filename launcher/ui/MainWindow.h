@@ -55,7 +55,6 @@ class QToolBar;
 class QFrame;
 class QButtonGroup;
 class QAction;
-class QStackedWidget;
 class InstanceProxyModel;
 class LabeledToolButton;
 class QLabel;
@@ -67,6 +66,7 @@ class KonamiCode;
 class InstanceTask;
 class LabeledToolButton;
 class Setting;
+class CloudyWebShell;
 
 namespace Ui {
 class MainWindow;
@@ -92,6 +92,8 @@ class MainWindow : public QMainWindow {
     void showEmbeddedPage(QWidget* page);
     void restoreMainContent();
     void setCloudyNavigationMode(bool notch);
+    void webSelectInstance(const QString& id);
+    void webOpenInstancePage(const QString& id, const QString& page);
    signals:
     void isClosing();
 
@@ -276,7 +278,7 @@ class MainWindow : public QMainWindow {
 
     // managed by the application object
     Task* m_versionLoadTask = nullptr;
-    QStackedWidget* m_contentStack = nullptr;
+    CloudyWebShell* m_cloudyWebShell = nullptr;
     QFrame* m_cloudySidebar = nullptr;
     QToolBar* m_cloudyNotch = nullptr;
     QButtonGroup* m_cloudyNavGroup = nullptr;

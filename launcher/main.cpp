@@ -48,6 +48,10 @@ int main(int argc, char* argv[])
     console::WindowsConsoleGuard _consoleGuard;
 #endif
 
+    // Initialize the Cloudy web identity before QApplication constructs any
+    // windows, so the same mark is available to titlebar/taskbar-facing icons.
+    Q_INIT_RESOURCE(cloudy_web);
+
     // initialize Qt
     Application app(argc, argv);
     switch (app.status()) {
