@@ -51,7 +51,7 @@ configure_file(org.prismlauncher.PrismLauncher.metainfo.xml.in ${Launcher_AppID}
 configure_file(prismlauncher.rc.in ${Launcher_APP_BINARY_NAME}.rc @ONLY)
 configure_file(prismlauncher.qrc.in ${Launcher_APP_BINARY_NAME}.qrc @ONLY)
 configure_file(prismlauncher.manifest.in ${Launcher_APP_BINARY_NAME}.manifest @ONLY)
-configure_file(prismlauncher.ico ${Launcher_APP_BINARY_NAME}.ico COPYONLY)
+configure_file(CloudyLauncher.ico ${Launcher_APP_BINARY_NAME}.ico COPYONLY)
 configure_file(${Launcher_SVGFileName} ${Launcher_SVGFileName} COPYONLY)
 configure_file(org.prismlauncher.PrismLauncher.mime.xml ${Launcher_AppID}.xml COPYONLY)
 
