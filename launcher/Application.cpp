@@ -444,7 +444,12 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
      * If there is one, tell it what the user actually wanted to do and exit.
      * We want to initialize this before logging to avoid messing with the log of a potential already running copy.
      */
-    auto appID = ApplicationId::fromPathAndVersion(QDir::currentPath(), BuildConfig.printableVersionString());
+    // Keep Cloudy’s single-instance channel distinct from a legacy Prism
+    // process that may still be installed/running against the same data root.
+    // A failed redirect used to call exit(1) before the logger or main window,
+    // which looked like a silent Windows startup failure.
+    const auto cloudyInstanceIdentity = QDir::currentPath() + QStringLiteral("/CloudyLauncher");
+    auto appID = ApplicationId::fromPathAndVersion(cloudyInstanceIdentity, BuildConfig.printableVersionString());
     {
         // FIXME: you can run the same binaries with multiple data dirs and they won't clash. This could cause issues for updates.
         m_peerInstance = new LocalPeer(this, appID);
@@ -490,8 +495,11 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
                 return;
             } else {
                 std::cerr << "Unable to redirect command to already running instance\n";
-                // C function not Qt function - event loop not started yet
-                ::exit(1);
+                showFatalErrorMessage(
+                    tr("Cloudy Launcher is already running"),
+                    tr("Cloudy Launcher found another process using this data folder, but it did not respond.\n\n"
+                       "For safety, the launcher will not open a second copy with the same data. Close the other Cloudy Launcher process in Task Manager and try again."));
+                return;
             }
         }
     }
