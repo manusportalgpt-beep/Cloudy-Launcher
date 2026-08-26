@@ -86,8 +86,8 @@
 #include <QCommandLineParser>
 #include <QCoreApplication>
 #include <QDebug>
-#include <QElapsedTimer>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFileInfo>
 #include <QFileOpenEvent>
 #include <QIcon>
@@ -96,8 +96,8 @@
 #include <QNetworkAccessManager>
 #include <QStringList>
 #include <QStringLiteral>
-#include <QTimer>
 #include <QStyleFactory>
+#include <QTimer>
 #include <QTranslator>
 #include <QWindow>
 
@@ -495,10 +495,10 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
                 return;
             } else {
                 std::cerr << "Unable to redirect command to already running instance\n";
-                showFatalErrorMessage(
-                    tr("Cloudy Launcher is already running"),
-                    tr("Cloudy Launcher found another process using this data folder, but it did not respond.\n\n"
-                       "For safety, the launcher will not open a second copy with the same data. Close the other Cloudy Launcher process in Task Manager and try again."));
+                showFatalErrorMessage(tr("Cloudy Launcher is already running"),
+                                      tr("Cloudy Launcher found another process using this data folder, but it did not respond.\n\n"
+                                         "For safety, the launcher will not open a second copy with the same data. Close the other Cloudy "
+                                         "Launcher process in Task Manager and try again."));
                 return;
             }
         }
@@ -1705,7 +1705,6 @@ void Application::ShowGlobalSettings(class QWidget* parent, QString open_page)
     dialog->exec();
     delete dialog;
 }
-
 
 MainWindow* Application::showMainWindow(bool minimized)
 {
