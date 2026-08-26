@@ -118,6 +118,6 @@ runs:
       with:
         aqtversion: "==3.1.*"
         version: ${{ inputs.qt-version }}
-        modules: qtimageformats qtnetworkauth qtwebchannel qtwebengine
+        modules: qtimageformats qtnetworkauth qtpositioning qtwebchannel qtwebengine
 
         cache: ${{ inputs.build-type == 'Debug' }}
