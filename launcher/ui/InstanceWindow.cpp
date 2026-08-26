@@ -50,9 +50,16 @@
 
 #include "icons/IconList.h"
 
-InstanceWindow::InstanceWindow(MinecraftInstance* instance, QWidget* parent) : QMainWindow(parent), m_instance(instance)
+InstanceWindow::InstanceWindow(MinecraftInstance* instance, QWidget* parent, bool embedded)
+    : QMainWindow(parent), m_instance(instance), m_embedded(embedded)
 {
-    setAttribute(Qt::WA_DeleteOnClose);
+    if (m_embedded) {
+        setWindowFlags(Qt::Widget);
+        setWindowModality(Qt::NonModal);
+        setAttribute(Qt::WA_DeleteOnClose, false);
+    } else {
+        setAttribute(Qt::WA_DeleteOnClose);
+    }
 
     auto icon = APPLICATION->icons()->getIcon(m_instance->iconKey());
     QString windowTitle = tr("Console window for ") + m_instance->name();
@@ -122,8 +129,9 @@ InstanceWindow::InstanceWindow(MinecraftInstance* instance, QWidget* parent) : Q
         connect(APPLICATION, &Application::globalSettingsApplied, this, &InstanceWindow::updateButtons);
     }
 
-    // restore window state
-    {
+    // Restore geometry only for the standalone console window. Embedded editors
+    // inherit the Cloudy workspace geometry and must not create a second window frame.
+    if (!m_embedded) {
         auto base64State = APPLICATION->settings()->get("ConsoleWindowState").toString().toUtf8();
         restoreState(QByteArray::fromBase64(base64State));
         auto base64Geometry = APPLICATION->settings()->get("ConsoleWindowGeometry").toString().toUtf8();
@@ -148,7 +156,9 @@ InstanceWindow::InstanceWindow(MinecraftInstance* instance, QWidget* parent) : Q
         static_cast<ManagedPackPage*>(m_container->getPage("managed_pack"))->setInstanceWindow(this);
     }
 
-    show();
+    if (!m_embedded) {
+        show();
+    }
 }
 
 void InstanceWindow::on_instanceStatusChanged(BaseInstance::Status, BaseInstance::Status newStatus)
@@ -221,8 +231,10 @@ void InstanceWindow::closeEvent(QCloseEvent* event)
         return;
     }
 
-    APPLICATION->settings()->set("ConsoleWindowState", QString::fromUtf8(saveState().toBase64()));
-    APPLICATION->settings()->set("ConsoleWindowGeometry", QString::fromUtf8(saveGeometry().toBase64()));
+    if (!m_embedded) {
+        APPLICATION->settings()->set("ConsoleWindowState", QString::fromUtf8(saveState().toBase64()));
+        APPLICATION->settings()->set("ConsoleWindowGeometry", QString::fromUtf8(saveGeometry().toBase64()));
+    }
     emit isClosing();
     event->accept();
 }

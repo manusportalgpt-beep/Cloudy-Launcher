@@ -143,9 +143,10 @@ void VersionListView::paintInfoLabel(QPaintEvent* event) const
     auto innerBounds = bounds;
     innerBounds.adjust(10, 10, -10, -10);
 
-    QColor background = QApplication::palette().color(QPalette::WindowText);
-    QColor foreground = QApplication::palette().color(QPalette::Base);
-    foreground.setAlpha(190);
+    QColor background = QApplication::palette().color(QPalette::Base);
+    background.setAlpha(220);
+    QColor foreground = QApplication::palette().color(QPalette::Text);
+    foreground.setAlpha(220);
     painter.setFont(font);
     auto fontMetrics = painter.fontMetrics();
     auto textRect = fontMetrics.boundingRect(innerBounds, Qt::AlignHCenter | Qt::TextWordWrap, emptyString);

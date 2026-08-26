@@ -71,9 +71,16 @@
 NewInstanceDialog::NewInstanceDialog(const QString& initialGroup,
                                      const QString& url,
                                      const QMap<QString, QString>& extraInfo,
-                                     QWidget* parent)
-    : QDialog(parent), ui(new Ui::NewInstanceDialog), m_instIconKey("default")
+                                     QWidget* parent,
+                                     bool embedded)
+    : QDialog(parent), ui(new Ui::NewInstanceDialog), m_instIconKey("default"), m_embedded(embedded)
 {
+    if (m_embedded) {
+        setWindowFlags(Qt::Widget);
+        setWindowModality(Qt::NonModal);
+        setAttribute(Qt::WA_DeleteOnClose, false);
+    }
+
     ui->setupUi(this);
 
     ui->instNameTextBox->installEventFilter(this);
@@ -143,12 +150,14 @@ NewInstanceDialog::NewInstanceDialog(const QString& initialGroup,
 
     updateDialogState();
 
-    if (APPLICATION->settings()->get("NewInstanceGeometry").isValid()) {
-        restoreGeometry(QByteArray::fromBase64(APPLICATION->settings()->get("NewInstanceGeometry").toString().toUtf8()));
-    } else {
-        auto* screen = parent->screen();
-        auto geometry = screen->availableSize();
-        resize(width(), qMin(geometry.height() - 50, 710));
+    if (!m_embedded) {
+        if (APPLICATION->settings()->get("NewInstanceGeometry").isValid()) {
+            restoreGeometry(QByteArray::fromBase64(APPLICATION->settings()->get("NewInstanceGeometry").toString().toUtf8()));
+        } else {
+            auto* screen = parent->screen();
+            auto geometry = screen->availableSize();
+            resize(width(), qMin(geometry.height() - 50, 710));
+        }
     }
 
     connect(m_container, &PageContainer::selectedPageChanged, this, &NewInstanceDialog::selectedPageChanged);
@@ -156,7 +165,9 @@ NewInstanceDialog::NewInstanceDialog(const QString& initialGroup,
 
 void NewInstanceDialog::reject()
 {
-    APPLICATION->settings()->set("NewInstanceGeometry", QString::fromUtf8(saveGeometry().toBase64()));
+    if (!m_embedded) {
+        APPLICATION->settings()->set("NewInstanceGeometry", QString::fromUtf8(saveGeometry().toBase64()));
+    }
 
     // This is just so that the pages get the close() call and can react to it, if needed.
     m_container->prepareToClose();
@@ -177,7 +188,9 @@ void NewInstanceDialog::accept()
         return;
     }
 
-    APPLICATION->settings()->set("NewInstanceGeometry", QString::fromUtf8(saveGeometry().toBase64()));
+    if (!m_embedded) {
+        APPLICATION->settings()->set("NewInstanceGeometry", QString::fromUtf8(saveGeometry().toBase64()));
+    }
     importIconNow();
 
     // This is just so that the pages get the close() call and can react to it, if needed.

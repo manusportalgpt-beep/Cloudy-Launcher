@@ -44,6 +44,8 @@
 
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
+#include "ui/CloudyWebBridge.h"
+#include "ui/CloudyWebShell.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -68,13 +70,15 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPainter>
 #include <QProgressDialog>
+#include <QPointer>
 #include <QShortcut>
 #include <QStatusBar>
 #include <QToolBar>
 #include <QToolButton>
+#include <QTimer>
 #include <QWidget>
-#include <QStackedWidget>
 #include <QWidgetAction>
 #include <memory>
 
@@ -140,6 +144,72 @@
 #include "MMCTime.h"
 
 namespace {
+QIcon cloudBrandIcon(const QColor& color)
+{
+    QPixmap pixmap(20, 20);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setPen(QPen(color, 1.5, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawEllipse(QRectF(3, 9, 8, 6));
+    painter.drawEllipse(QRectF(7, 6, 8, 8));
+    painter.drawEllipse(QRectF(12, 9, 5, 6));
+    painter.drawLine(QPointF(5, 15), QPointF(15, 15));
+    painter.end();
+    return QIcon(pixmap);
+}
+
+QIcon cloudNavIcon(int kind, const QColor& color)
+{
+    QPixmap pixmap(20, 20);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setPen(QPen(color, 1.6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter.setBrush(Qt::NoBrush);
+
+    switch (kind) {
+        case 0: {  // home / library
+            QPolygonF roof;
+            roof << QPointF(3, 9) << QPointF(10, 3) << QPointF(17, 9);
+            painter.drawPolyline(roof);
+            painter.drawLine(QPointF(5, 8), QPointF(5, 17));
+            painter.drawLine(QPointF(15, 8), QPointF(15, 17));
+            painter.drawLine(QPointF(5, 17), QPointF(15, 17));
+            painter.drawLine(QPointF(8, 17), QPointF(8, 12));
+            painter.drawLine(QPointF(8, 12), QPointF(12, 12));
+            painter.drawLine(QPointF(12, 12), QPointF(12, 17));
+            break;
+        }
+        case 1:  // create
+            painter.drawEllipse(QPointF(10, 10), 7, 7);
+            painter.drawLine(QPointF(10, 6), QPointF(10, 14));
+            painter.drawLine(QPointF(6, 10), QPointF(14, 10));
+            break;
+        case 2:  // accounts
+            painter.drawEllipse(QPointF(10, 6), 3, 3);
+            painter.drawArc(QRectF(4, 10, 12, 9), 0, 180 * 16);
+            break;
+        case 3:  // settings
+            painter.drawLine(QPointF(4, 5), QPointF(16, 5));
+            painter.drawLine(QPointF(4, 10), QPointF(16, 10));
+            painter.drawLine(QPointF(4, 15), QPointF(16, 15));
+            painter.drawEllipse(QPointF(8, 5), 1.4, 1.4);
+            painter.drawEllipse(QPointF(13, 10), 1.4, 1.4);
+            painter.drawEllipse(QPointF(7, 15), 1.4, 1.4);
+            break;
+        default:  // skin studio / appearance
+            painter.drawRoundedRect(QRectF(5, 3, 10, 14), 2, 2);
+            painter.drawLine(QPointF(8, 7), QPointF(12, 7));
+            painter.drawLine(QPointF(8, 10), QPointF(12, 10));
+            painter.drawLine(QPointF(8, 13), QPointF(11, 13));
+            break;
+    }
+    painter.end();
+    return QIcon(pixmap);
+}
+
 QString profileInUseFilter(const QString& profile, bool used)
 {
     if (used) {
@@ -156,6 +226,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     setWindowIcon(APPLICATION->logo());
     setWindowTitle(QStringLiteral("Cloudy Launcher"));
+    setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
     setMinimumSize(QSize(1120, 720));
 
     // Cloudy is one workspace, not a collection of QMainWindow toolbars.
@@ -169,81 +240,83 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     m_cloudyHeader = new QFrame(m_cloudyWorkspace);
     m_cloudyHeader->setObjectName(QStringLiteral("cloudyHeader"));
+    m_cloudyHeader->setFixedHeight(38);
     auto* headerLayout = new QHBoxLayout(m_cloudyHeader);
-    headerLayout->setContentsMargins(20, 16, 20, 16);
-    headerLayout->setSpacing(10);
+    headerLayout->setContentsMargins(8, 0, 8, 0);
+    headerLayout->setSpacing(5);
 
     auto* headerBrand = new QLabel(m_cloudyHeader);
     headerBrand->setObjectName(QStringLiteral("cloudyHeaderBrand"));
-    headerBrand->setPixmap(APPLICATION->logo().pixmap(QSize(38, 38)));
+    headerBrand->setPixmap(cloudBrandIcon(palette().color(QPalette::Text)).pixmap(QSize(20, 20)));
+    headerBrand->setFixedSize(20, 20);
     headerLayout->addWidget(headerBrand, 0, Qt::AlignVCenter);
 
-    auto* headerIdentity = new QVBoxLayout();
-    headerIdentity->setSpacing(1);
     auto* headerName = new QLabel(tr("Cloudy Launcher"), m_cloudyHeader);
     headerName->setObjectName(QStringLiteral("cloudyHeaderName"));
-    auto* headerTagline = new QLabel(tr("A calm workspace for your Minecraft instances"), m_cloudyHeader);
-    headerTagline->setObjectName(QStringLiteral("cloudyHeaderTagline"));
-    headerIdentity->addWidget(headerName);
-    headerIdentity->addWidget(headerTagline);
-    headerLayout->addLayout(headerIdentity);
-    headerLayout->addSpacing(28);
+    headerLayout->addWidget(headerName, 0, Qt::AlignVCenter);
 
-    auto* contextLayout = new QVBoxLayout();
-    contextLayout->setSpacing(1);
-    m_workspaceTitle = new QLabel(tr("Library"), m_cloudyHeader);
-    m_workspaceTitle->setObjectName(QStringLiteral("cloudyWorkspaceTitle"));
-    m_workspaceSubtitle = new QLabel(tr("Your instances and worlds"), m_cloudyHeader);
-    m_workspaceSubtitle->setObjectName(QStringLiteral("cloudyWorkspaceSubtitle"));
-    contextLayout->addWidget(m_workspaceTitle);
-    contextLayout->addWidget(m_workspaceSubtitle);
-    headerLayout->addLayout(contextLayout);
-    headerLayout->addStretch(1);
-
-    const auto makeHeaderButton = [this](QAction* action, const QString& objectName) {
+    auto makeHeaderNavigationButton = [this](const QIcon& icon, const QString& tooltip) {
         auto* button = new QToolButton(m_cloudyHeader);
-        button->setDefaultAction(action);
-        button->setObjectName(objectName);
-        button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-        button->setAutoRaise(false);
-        button->setMinimumHeight(34);
+        button->setIcon(icon);
+        button->setToolTip(tooltip);
+        button->setAccessibleName(tooltip);
+        button->setObjectName(QStringLiteral("cloudyHeaderNavigation"));
+        button->setAutoRaise(true);
+        button->setFixedSize(24, 24);
         return button;
     };
-    headerLayout->addWidget(makeHeaderButton(ui->actionAddInstance, QStringLiteral("cloudyHeaderPrimary")));
-    headerLayout->addWidget(makeHeaderButton(ui->actionFoldersButton, QStringLiteral("cloudyHeaderButton")));
-    headerLayout->addWidget(makeHeaderButton(ui->actionSettings, QStringLiteral("cloudyHeaderButton")));
-    headerLayout->addWidget(makeHeaderButton(ui->actionHelpButton, QStringLiteral("cloudyHeaderButton")));
-    headerLayout->addWidget(makeHeaderButton(ui->actionCheckUpdate, QStringLiteral("cloudyHeaderButton")));
-    auto* headerAccountButton = makeHeaderButton(ui->actionAccountsButton, QStringLiteral("cloudyAccountButton"));
-    headerAccountButton->setPopupMode(QToolButton::MenuButtonPopup);
-    headerLayout->addWidget(headerAccountButton);
+    headerLayout->addSpacing(8);
+    auto* backButton = makeHeaderNavigationButton(QIcon::fromTheme(QStringLiteral("go-previous")), tr("Back to Library"));
+    connect(backButton, &QToolButton::clicked, this, &MainWindow::restoreMainContent);
+    headerLayout->addWidget(backButton);
+    auto* forwardButton = makeHeaderNavigationButton(QIcon::fromTheme(QStringLiteral("go-next")), tr("Forward"));
+    forwardButton->setEnabled(false);
+    headerLayout->addWidget(forwardButton);
+
+    auto* breadcrumbSeparator = new QLabel(QStringLiteral("/"), m_cloudyHeader);
+    breadcrumbSeparator->setObjectName(QStringLiteral("cloudyBreadcrumbSeparator"));
+    headerLayout->addWidget(breadcrumbSeparator, 0, Qt::AlignVCenter);
+    m_workspaceTitle = new QLabel(tr("Home"), m_cloudyHeader);
+    m_workspaceTitle->setObjectName(QStringLiteral("cloudyWorkspaceTitle"));
+    headerLayout->addWidget(m_workspaceTitle, 0, Qt::AlignVCenter);
+    m_workspaceSubtitle = nullptr;
+
+    headerLayout->addStretch(1);
+    m_cloudyRunningStatus = new QLabel(tr("No instances is currently running"), m_cloudyHeader);
+    m_cloudyRunningStatus->setObjectName(QStringLiteral("cloudyRunningStatus"));
+    m_cloudyRunningStatus->setAlignment(Qt::AlignCenter);
+    m_cloudyRunningStatus->setMinimumWidth(210);
+    headerLayout->addWidget(m_cloudyRunningStatus, 0, Qt::AlignVCenter);
+    headerLayout->addStretch(1);
 
     workspaceLayout->addWidget(m_cloudyHeader);
 
     auto* workspaceBody = new QWidget(m_cloudyWorkspace);
     workspaceBody->setObjectName(QStringLiteral("cloudyWorkspaceBody"));
     auto* bodyLayout = new QHBoxLayout(workspaceBody);
-    bodyLayout->setContentsMargins(14, 14, 14, 14);
-    bodyLayout->setSpacing(14);
+    bodyLayout->setContentsMargins(0, 0, 0, 0);
+    bodyLayout->setSpacing(0);
 
     m_cloudySidebar = new QFrame(workspaceBody);
     m_cloudySidebar->setObjectName(QStringLiteral("cloudyWorkspaceNav"));
-    m_cloudySidebar->setMinimumWidth(188);
-    m_cloudySidebar->setMaximumWidth(212);
+    m_cloudySidebar->setMinimumWidth(54);
+    m_cloudySidebar->setMaximumWidth(54);
     auto* navigationLayout = new QVBoxLayout(m_cloudySidebar);
-    navigationLayout->setContentsMargins(10, 14, 10, 14);
-    navigationLayout->setSpacing(6);
+    navigationLayout->setContentsMargins(6, 8, 6, 8);
+    navigationLayout->setSpacing(8);
     bodyLayout->addWidget(m_cloudySidebar);
 
-    m_contentStack = new QStackedWidget(workspaceBody);
-    m_contentStack->setObjectName(QStringLiteral("cloudyContentStack"));
-    m_contentStack->addWidget(ui->centralWidget);
-    bodyLayout->addWidget(m_contentStack, 1);
+    m_cloudyWebShell = new CloudyWebShell(this, workspaceBody);
+    bodyLayout->addWidget(m_cloudyWebShell, 1);
+    connect(APPLICATION->instances(), &InstanceList::instancesChanged, m_cloudyWebShell->bridge(), &CloudyWebBridge::stateChanged);
+    connect(APPLICATION->accounts(), &AccountList::listChanged, m_cloudyWebShell->bridge(), &CloudyWebBridge::stateChanged);
+    connect(APPLICATION->accounts(), &AccountList::listActivityChanged, m_cloudyWebShell->bridge(), &CloudyWebBridge::stateChanged);
+    connect(APPLICATION->accounts(), &AccountList::defaultAccountChanged, m_cloudyWebShell->bridge(), &CloudyWebBridge::stateChanged);
 
     m_cloudyDetail = new QFrame(workspaceBody);
     m_cloudyDetail->setObjectName(QStringLiteral("cloudyDetailCanvas"));
-    m_cloudyDetail->setMinimumWidth(280);
-    m_cloudyDetail->setMaximumWidth(320);
+    m_cloudyDetail->setMinimumWidth(252);
+    m_cloudyDetail->setMaximumWidth(292);
     bodyLayout->addWidget(m_cloudyDetail);
     workspaceLayout->addWidget(workspaceBody, 1);
 
@@ -256,9 +329,20 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     m_statusCenter->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     footerLayout->addWidget(m_statusLeft, 1);
     footerLayout->addWidget(m_statusCenter, 0);
+    m_cloudyFooter->setVisible(false);
     workspaceLayout->addWidget(m_cloudyFooter);
 
-    setCentralWidget(m_cloudyWorkspace);
+    // The WebEngine shell is the only visible application surface. Keep the
+    // former widget workspace alive but hidden because legacy actions and page
+    // lifecycle callbacks still reference its compatibility objects.
+    bodyLayout->removeWidget(m_cloudyWebShell);
+    m_cloudyWebShell->setParent(this);
+    m_cloudyWorkspace->hide();
+    m_cloudyHeader->hide();
+    m_cloudySidebar->hide();
+    m_cloudyDetail->hide();
+    m_cloudyFooter->hide();
+    setCentralWidget(m_cloudyWebShell);
     ui->mainToolBar->setVisible(false);
     ui->instanceToolBar->setVisible(false);
     ui->newsToolBar->setVisible(false);
@@ -270,38 +354,36 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     const auto makeNavButton = [this, navigationLayout](const QString& label, const QString& objectName, const QIcon& icon) {
         auto* button = new QToolButton(m_cloudySidebar);
         button->setObjectName(objectName);
-        button->setText(label);
+        button->setToolTip(label);
+        button->setAccessibleName(label);
         button->setIcon(icon);
-        button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        button->setToolButtonStyle(Qt::ToolButtonIconOnly);
         button->setCheckable(true);
         button->setAutoRaise(true);
-        button->setMinimumHeight(42);
-        button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        button->setFixedSize(40, 40);
+        button->setIconSize(QSize(20, 20));
         m_cloudyNavGroup->addButton(button);
-        navigationLayout->addWidget(button);
+        navigationLayout->addWidget(button, 0, Qt::AlignHCenter);
         return button;
     };
 
-    m_libraryNavButton = makeNavButton(tr("Library"), QStringLiteral("cloudyNavLibrary"), QIcon::fromTheme(QStringLiteral("instances")));
+    const auto railColor = palette().color(QPalette::Text);
+    m_libraryNavButton = makeNavButton(tr("Library"), QStringLiteral("cloudyNavLibrary"), cloudNavIcon(0, railColor));
     m_libraryNavButton->setChecked(true);
     connect(m_libraryNavButton, &QToolButton::clicked, this, &MainWindow::restoreMainContent);
 
-    auto* addNavButton = makeNavButton(tr("New instance"), QStringLiteral("cloudyNavAdd"), ui->actionAddInstance->icon());
-    connect(addNavButton, &QToolButton::clicked, ui->actionAddInstance, &QAction::trigger);
-    auto* accountNavButton = makeNavButton(tr("Accounts"), QStringLiteral("cloudyNavAccounts"), ui->actionManageAccounts->icon());
+    auto* addNavButton = makeNavButton(tr("New instance"), QStringLiteral("cloudyNavAdd"), cloudNavIcon(1, railColor));
+    connect(addNavButton, &QToolButton::clicked, this, &MainWindow::on_actionAddInstance_triggered);
+    auto* accountNavButton = makeNavButton(tr("Accounts"), QStringLiteral("cloudyNavAccounts"), cloudNavIcon(2, railColor));
     connect(accountNavButton, &QToolButton::clicked, ui->actionManageAccounts, &QAction::trigger);
-    auto* settingsNavButton = makeNavButton(tr("Settings"), QStringLiteral("cloudyNavSettings"), ui->actionSettings->icon());
+    auto* settingsNavButton = makeNavButton(tr("Settings"), QStringLiteral("cloudyNavSettings"), cloudNavIcon(3, railColor));
     connect(settingsNavButton, &QToolButton::clicked, ui->actionSettings, &QAction::trigger);
-    auto* skinsNavButton = makeNavButton(tr("Skin Studio"), QStringLiteral("cloudyNavSkins"), ui->actionManageSkins->icon());
+    auto* skinsNavButton = makeNavButton(tr("Skin Studio"), QStringLiteral("cloudyNavSkins"), cloudNavIcon(4, railColor));
     connect(skinsNavButton, &QToolButton::clicked, ui->actionManageSkins, &QAction::trigger);
 
     auto* navSpacer = new QWidget(m_cloudySidebar);
     navSpacer->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     navigationLayout->addWidget(navSpacer);
-    auto* navCaption = new QLabel(tr("Cloudy workspace"), m_cloudySidebar);
-    navCaption->setObjectName(QStringLiteral("cloudyNavCaption"));
-    navCaption->setAlignment(Qt::AlignCenter);
-    navigationLayout->addWidget(navCaption);
 
     m_cloudyNotch = nullptr;
     m_toggleCloudyNavigation = nullptr;
@@ -312,8 +394,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     // Selected-instance context lives in the same Cloudy canvas as the library.
     {
         auto* detailLayout = new QVBoxLayout(m_cloudyDetail);
-        detailLayout->setContentsMargins(18, 18, 18, 18);
-        detailLayout->setSpacing(8);
+        detailLayout->setContentsMargins(20, 12, 12, 12);
+        detailLayout->setSpacing(5);
 
         auto* detailCaption = new QLabel(tr("Selected instance"), m_cloudyDetail);
         detailCaption->setObjectName(QStringLiteral("cloudyDetailCaption"));
@@ -335,7 +417,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         m_instanceMeta->setWordWrap(true);
         detailLayout->addWidget(m_instanceTitle);
         detailLayout->addWidget(m_instanceMeta);
-        detailLayout->addSpacing(8);
+        detailLayout->addSpacing(4);
 
         auto* actionCaption = new QLabel(tr("Instance actions"), m_cloudyDetail);
         actionCaption->setObjectName(QStringLiteral("cloudyDetailCaption"));
@@ -429,7 +511,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         ui->actionAddToPATH->setVisible(false);
 #endif
 
-        // disabled until we have an instance selected
+        // Keep the empty Library free of contextual controls; show detail only for a selected instance.
+        m_cloudyDetail->setVisible(false);
         m_cloudyDetail->setEnabled(false);
         setInstanceActionsEnabled(false);
 
@@ -539,15 +622,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         auto* librarySurface = new QWidget(ui->centralWidget);
         librarySurface->setObjectName(QStringLiteral("librarySurface"));
         auto* libraryLayout = new QVBoxLayout(librarySurface);
-        libraryLayout->setContentsMargins(24, 20, 24, 12);
-        libraryLayout->setSpacing(12);
+        libraryLayout->setContentsMargins(48, 22, 48, 16);
+        libraryLayout->setSpacing(10);
 
         auto* libraryHeader = new QHBoxLayout();
         libraryHeader->setSpacing(12);
         auto* libraryHeading = new QVBoxLayout();
-        auto* libraryTitle = new QLabel(tr("Library"), librarySurface);
+        auto* libraryTitle = new QLabel(tr("Greetings!"), librarySurface);
         libraryTitle->setObjectName(QStringLiteral("libraryTitle"));
-        auto* librarySubtitle = new QLabel(tr("Your Minecraft instances"), librarySurface);
+        auto* librarySubtitle = new QLabel(tr("Here are your worlds and servers — enjoy!"), librarySurface);
         librarySubtitle->setObjectName(QStringLiteral("librarySubtitle"));
         libraryHeading->addWidget(libraryTitle);
         libraryHeading->addWidget(librarySubtitle);
@@ -556,17 +639,26 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
         auto* librarySearch = new QLineEdit(librarySurface);
         librarySearch->setObjectName(QStringLiteral("librarySearch"));
-        librarySearch->setPlaceholderText(tr("Search instances..."));
+        librarySearch->setPlaceholderText(tr("Search"));
         librarySearch->setClearButtonEnabled(true);
+        librarySearch->setMaximumWidth(170);
+        librarySearch->setVisible(false);
         connect(librarySearch, &QLineEdit::textChanged, proxymodel, &QSortFilterProxyModel::setFilterFixedString);
-        libraryHeader->addWidget(librarySearch);
+        auto* librarySearchShortcut = new QShortcut(QKeySequence::Find, librarySurface);
+        connect(librarySearchShortcut, &QShortcut::activated, librarySearch, [librarySearch] {
+            librarySearch->setVisible(true);
+            librarySearch->setFocus(Qt::ShortcutFocusReason);
+        });
+        libraryHeader->addWidget(librarySearch, 0, Qt::AlignVCenter);
 
-        auto* createInstanceButton = new QToolButton(librarySurface);
-        createInstanceButton->setText(tr("Create instance"));
-        createInstanceButton->setToolButtonStyle(Qt::ToolButtonTextOnly);
-        createInstanceButton->setObjectName(QStringLiteral("libraryCreateButton"));
-        connect(createInstanceButton, &QToolButton::clicked, ui->actionAddInstance, &QAction::trigger);
-        libraryHeader->addWidget(createInstanceButton);
+        auto* libraryAccountButton = new QToolButton(librarySurface);
+        libraryAccountButton->setDefaultAction(ui->actionAccountsButton);
+        libraryAccountButton->setObjectName(QStringLiteral("cloudyReferenceAccount"));
+        libraryAccountButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        libraryAccountButton->setPopupMode(QToolButton::MenuButtonPopup);
+        libraryAccountButton->setMinimumHeight(44);
+        libraryAccountButton->setMinimumWidth(210);
+        libraryHeader->addWidget(libraryAccountButton, 0, Qt::AlignVCenter);
         libraryLayout->addLayout(libraryHeader);
 
         view->setParent(librarySurface);
@@ -614,6 +706,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     // When the global settings page closes, we want to know about it and update our state
     connect(APPLICATION, &Application::globalSettingsApplied, this, &MainWindow::globalSettingsClosed);
+    connect(APPLICATION, &Application::instancesLoaded, this, [this] {
+        setSelectedInstanceById(APPLICATION->settings()->get("SelectedInstance").toString());
+    });
 
     // Account menus remain action-backed; their visible entry point is the Cloudy header.
     // Use undocumented property... https://stackoverflow.com/questions/7121718/create-a-scrollbar-in-a-submenu-qt
@@ -634,11 +729,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     // TODO: refresh accounts here?
     // auto accounts = APPLICATION->accounts();
 
-    // load the news
-    {
+    // News fetching is optional startup work; start it after the first Cloudy frame.
+    QTimer::singleShot(0, this, [this]() {
         m_newsChecker->reloadNews();
         updateNewsLabel();
-    }
+    });
 
     if (APPLICATION->updaterEnabled()) {
         bool updatesAllowed = APPLICATION->updatesAreAllowed();
@@ -725,36 +820,26 @@ void MainWindow::setWorkspaceContext(const QString& title, const QString& subtit
 
 void MainWindow::showEmbeddedPage(QWidget* page)
 {
-    if (!page || !m_contentStack)
+    if (!page || !m_cloudyWebShell)
         return;
 
-    page->setParent(m_contentStack);
-    page->setObjectName(QStringLiteral("cloudyEmbeddedPage"));
-    page->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    m_contentStack->addWidget(page);
-    m_contentStack->setCurrentWidget(page);
+    qInfo() << "Cloudy embedded page shown:" << page->metaObject()->className();
+    m_cloudyWebShell->showNativePage(page);
     if (m_cloudyDetail)
         m_cloudyDetail->setVisible(false);
-    page->show();
 }
 
 void MainWindow::restoreMainContent()
 {
-    if (!m_contentStack)
-        return;
-
-    while (m_contentStack->count() > 1) {
-        QWidget* page = m_contentStack->widget(1);
-        m_contentStack->removeWidget(page);
-        page->deleteLater();
-    }
-    m_contentStack->setCurrentWidget(ui->centralWidget);
+    if (m_cloudyWebShell)
+        m_cloudyWebShell->restoreWebPage();
     if (m_cloudyDetail)
-        m_cloudyDetail->setVisible(true);
-    setWorkspaceContext(tr("Library"), tr("Your instances and worlds"), QStringLiteral("cloudyNavLibrary"));
+        m_cloudyDetail->setVisible(m_selectedInstance != nullptr);
+    setWorkspaceContext(tr("Home"), tr("Your instances and worlds"), QStringLiteral("cloudyNavLibrary"));
     if (m_libraryNavButton)
         m_libraryNavButton->setChecked(true);
 }
+
 
 void MainWindow::setCloudyNavigationMode(bool notch)
 {
@@ -1227,25 +1312,46 @@ void MainWindow::addInstance(const QString& url, const QMap<QString, QString>& e
         groupName = APPLICATION->settings()->get("LastUsedGroupForNewInstance").toString();
     }
 
-    // Keep the complete existing provider pages, but host the dialog in Cloudy's content stack.
-    auto* newInstDlg = new NewInstanceDialog(groupName, url, extra_info, this);
-    newInstDlg->setWindowFlags(Qt::Widget);
-    newInstDlg->setAttribute(Qt::WA_DeleteOnClose, false);
+    // The provider pages include several legacy source initializers. Show a
+    // lightweight Cloudy loading surface first, then build those pages after the
+    // current event has painted so the old Library canvas is never frozen in place.
+    QPointer<QFrame> loadingPage = new QFrame(this);
+    loadingPage->setObjectName(QStringLiteral("cloudyLoadingPage"));
+    auto* loadingLayout = new QVBoxLayout(loadingPage);
+    loadingLayout->setContentsMargins(32, 32, 32, 32);
+    loadingLayout->setAlignment(Qt::AlignCenter);
+    auto* loadingTitle = new QLabel(tr("Preparing New Instance"), loadingPage);
+    loadingTitle->setObjectName(QStringLiteral("cloudyLoadingTitle"));
+    auto* loadingSubtitle = new QLabel(tr("Loading available instance sources…"), loadingPage);
+    loadingSubtitle->setObjectName(QStringLiteral("cloudyLoadingSubtitle"));
+    loadingSubtitle->setAlignment(Qt::AlignCenter);
+    loadingLayout->addWidget(loadingTitle, 0, Qt::AlignCenter);
+    loadingLayout->addWidget(loadingSubtitle, 0, Qt::AlignCenter);
+    showEmbeddedPage(loadingPage);
 
-    connect(newInstDlg, &QDialog::accepted, this, [this, newInstDlg] {
-        APPLICATION->settings()->set("LastUsedGroupForNewInstance", newInstDlg->instGroup());
-        APPLICATION->settings()->set("LastUsedInstDirForNewInstance", newInstDlg->instDir());
-        if (auto* creationTask = newInstDlg->extractTask()) {
-            instanceFromInstanceTask(creationTask);
-        }
-        restoreMainContent();
+    QTimer::singleShot(0, this, [this, groupName, url, extra_info, loadingPage] {
+        if (!m_cloudyWebShell || !loadingPage)
+            return;
+
+        // Keep the complete existing provider pages, but host the dialog in Cloudy's web workspace.
+        auto* newInstDlg = new NewInstanceDialog(groupName, url, extra_info, this, true);
+        connect(newInstDlg, &QDialog::accepted, this, [this, newInstDlg] {
+            APPLICATION->settings()->set("LastUsedGroupForNewInstance", newInstDlg->instGroup());
+            APPLICATION->settings()->set("LastUsedInstDirForNewInstance", newInstDlg->instDir());
+            if (auto* creationTask = newInstDlg->extractTask()) {
+                instanceFromInstanceTask(creationTask);
+            }
+            restoreMainContent();
+        });
+        connect(newInstDlg, &QDialog::rejected, this, [this] { restoreMainContent(); });
+
+        showEmbeddedPage(newInstDlg);
     });
-    connect(newInstDlg, &QDialog::rejected, this, [this] { restoreMainContent(); });
-    showEmbeddedPage(newInstDlg);
 }
 
 void MainWindow::on_actionAddInstance_triggered()
 {
+    setWorkspaceContext(tr("New instance"), tr("Create a Minecraft instance without leaving Cloudy"), QStringLiteral("cloudyNavAdd"));
     addInstance();
 }
 
@@ -1554,6 +1660,37 @@ void MainWindow::setSelectedInstanceById(const QString& id)
     }
 }
 
+void MainWindow::webSelectInstance(const QString& id)
+{
+    setSelectedInstanceById(id);
+    if (m_selectedInstance)
+        APPLICATION->settings()->set(QStringLiteral("SelectedInstance"), m_selectedInstance->id());
+}
+
+void MainWindow::webOpenInstancePage(const QString& id, const QString& page)
+{
+    if (!id.isEmpty())
+        webSelectInstance(id);
+    if (!m_selectedInstance)
+        return;
+
+    if (m_selectedInstance->canEdit()) {
+        auto* editor = APPLICATION->showInstanceWindow(m_selectedInstance, page);
+        if (editor) {
+            editor->setWindowFlags(Qt::Widget);
+            editor->setAttribute(Qt::WA_DeleteOnClose, false);
+            connect(editor, &InstanceWindow::isClosing, this, &MainWindow::restoreMainContent, Qt::UniqueConnection);
+            setWorkspaceContext(tr("Instance workspace"), tr("Configure this instance without leaving Cloudy"));
+            showEmbeddedPage(editor);
+        }
+    } else {
+        CustomMessageBox::selectable(this, tr("Instance not editable"),
+                                     tr("This instance is not editable. It may be broken, invalid, or too old. Check logs for details."),
+                                     QMessageBox::Critical)
+            ->show();
+    }
+}
+
 void MainWindow::on_actionChangeInstGroup_triggered()
 {
     if (!m_selectedInstance)
@@ -1709,10 +1846,8 @@ void MainWindow::on_actionEditInstance_triggered()
     if (m_selectedInstance->canEdit()) {
         // Reuse the real InstanceWindow/page container, but host it inside Cloudy.
         // The editor keeps its existing pages and save/launch behaviour.
-        auto* editor = APPLICATION->showInstanceWindow(m_selectedInstance);
+        auto* editor = APPLICATION->showInstanceWindow(m_selectedInstance, QString(), true);
         if (editor) {
-            editor->setWindowFlags(Qt::Widget);
-            editor->setAttribute(Qt::WA_DeleteOnClose, false);
             connect(editor, &InstanceWindow::isClosing, this, &MainWindow::restoreMainContent, Qt::UniqueConnection);
             setWorkspaceContext(tr("Instance workspace"), tr("Configure this instance without leaving Cloudy"));
             showEmbeddedPage(editor);
@@ -1731,9 +1866,7 @@ void MainWindow::on_actionManageSkins_triggered()
 
     if (account && (account->accountType() == AccountType::MSA) && !account->isActive()) {
         setWorkspaceContext(tr("Skin Studio"), tr("Preview, import and manage your Minecraft skin"), QStringLiteral("cloudyNavSkins"));
-        auto* dialog = new SkinManageDialog(this, account);
-        dialog->setWindowFlags(Qt::Widget);
-        dialog->setAttribute(Qt::WA_DeleteOnClose, false);
+        auto* dialog = new SkinManageDialog(this, account, true);
         connect(dialog, &QDialog::finished, this, &MainWindow::restoreMainContent, Qt::UniqueConnection);
         showEmbeddedPage(dialog);
     }
@@ -1912,7 +2045,10 @@ void MainWindow::closeEvent(QCloseEvent* event)
     // Save the window state and geometry.
     APPLICATION->settings()->set("MainWindowState", QString::fromUtf8(saveState().toBase64()));
     APPLICATION->settings()->set("MainWindowGeometry", QString::fromUtf8(saveGeometry().toBase64()));
-    instanceToolbarSetting->set(QString::fromUtf8(ui->instanceToolBar->getVisibilityState().toBase64()));
+    // The legacy instance toolbar is no longer part of the visible Cloudy workspace.
+    // Do not dereference its old visibility setting during shutdown.
+    if (m_cloudyWebShell)
+        m_cloudyWebShell->prepareForShutdown();
     event->accept();
     emit isClosing();
 }
@@ -2003,6 +2139,7 @@ void MainWindow::instanceChanged(const QModelIndex& current, [[maybe_unused]] co
     QString id = current.data(InstanceList::InstanceIDRole).toString();
     m_selectedInstance = APPLICATION->instances()->getInstanceById(id);
     if (m_selectedInstance) {
+        m_cloudyDetail->setVisible(true);
         m_cloudyDetail->setEnabled(true);
         setInstanceActionsEnabled(true);
         ui->actionLaunchInstance->setEnabled(m_selectedInstance->canLaunch());
@@ -2054,6 +2191,7 @@ void MainWindow::selectionBad()
     m_statusLeft->setText(tr("No instance selected"));
 
     statusBar()->clearMessage();
+    m_cloudyDetail->setVisible(false);
     m_cloudyDetail->setEnabled(false);
     setInstanceActionsEnabled(false);
     updateLaunchButton();

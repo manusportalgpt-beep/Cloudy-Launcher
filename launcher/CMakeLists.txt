@@ -824,6 +824,10 @@ SET(LAUNCHER_SOURCES
     ui/GuiUtil.cpp
     ui/MainWindow.h
     ui/MainWindow.cpp
+    ui/CloudyWebBridge.h
+    ui/CloudyWebBridge.cpp
+    ui/CloudyWebShell.h
+    ui/CloudyWebShell.cpp
     ui/InstanceWindow.h
     ui/InstanceWindow.cpp
     ui/ViewLogWindow.h
@@ -1218,6 +1222,7 @@ qt_add_resources(LAUNCHER_RESOURCES
     resources/flat/flat.qrc
     resources/flat_white/flat_white.qrc
     resources/documents/documents.qrc
+    resources/cloudy_web/cloudy_web.qrc
     resources/shaders/shaders.qrc
     "${CMAKE_CURRENT_BINARY_DIR}/../${Launcher_Branding_LogoQRC}"
 )
@@ -1290,6 +1295,8 @@ target_link_libraries(Launcher_logic
     Qt${QT_VERSION_MAJOR}::Gui
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::NetworkAuth
+    Qt${QT_VERSION_MAJOR}::WebChannel
+    Qt${QT_VERSION_MAJOR}::WebEngineWidgets
     Qt${QT_VERSION_MAJOR}::OpenGL
     ${Launcher_QT_DBUS}
     ${Launcher_QT_LIBS}
@@ -1514,7 +1521,6 @@ if(WIN32 OR (UNIX AND APPLE))
             LIB_DIR ${LIBRARY_DEST_DIR}
             PLUGINS_DIR ${PLUGIN_DEST_DIR}
             NO_OVERWRITE
-            NO_TRANSLATIONS
             NO_COMPILER_RUNTIME
             DEPLOY_TOOL_OPTIONS ${QT_DEPLOY_TOOL_OPTIONS}
         )"

@@ -392,6 +392,11 @@ Section "@Launcher_DisplayName@"
   File /r "jars"
   File /r "platforms"
   File /r "styles"
+  ; Qt WebEngine is a multi-process runtime and needs its helper, Chromium
+  ; resource packs, ICU/V8 data, and locale packs beside the launcher.
+  File "QtWebEngineProcess*.exe"
+  File /r "resources"
+  File /r "translations"
   File /nonfatal /r "tls"
 
   ; Write the installation path into the registry

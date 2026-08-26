@@ -189,7 +189,7 @@ class Application : public QApplication {
      */
     bool openJsonEditor(const QString& filename);
 
-    InstanceWindow* showInstanceWindow(MinecraftInstance* instance, QString page = QString());
+    InstanceWindow* showInstanceWindow(MinecraftInstance* instance, QString page = QString(), bool embedded = false);
     MainWindow* showMainWindow(bool minimized = false);
     ViewLogWindow* showLogWindow();
 
@@ -207,6 +207,7 @@ class Application : public QApplication {
     void updateAllowedChanged(bool status);
     void globalSettingsAboutToOpen();
     void globalSettingsApplied();
+    void instancesLoaded();
     int currentCatChanged(int index);
 
     void oauthReplyRecieved(QVariantMap);
@@ -233,6 +234,7 @@ class Application : public QApplication {
    private:
     bool handleDataMigration(const QString& currentData, const QString& oldData, const QString& name, const QString& configFile) const;
     bool createSetupWizard();
+    bool checkWebEngineRuntime();
     void performMainStartupAction();
 
     // sets the fatal error message and m_status to Failed.
@@ -293,6 +295,8 @@ class Application : public QApplication {
     size_t m_openWindows = 0;
     size_t m_runningInstances = 0;
     bool m_updateRunning = false;
+    bool m_instancesLoaded = false;
+    bool m_quitRequested = false;
 
     // main window, if any
     MainWindow* m_mainWindow = nullptr;

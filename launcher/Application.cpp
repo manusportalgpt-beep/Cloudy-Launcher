@@ -67,10 +67,6 @@
 #include "ui/pages/global/MinecraftPage.h"
 #include "ui/pages/global/ProxyPage.h"
 
-#include "ui/setupwizard/AutoJavaWizardPage.h"
-#include "ui/setupwizard/JavaWizardPage.h"
-#include "ui/setupwizard/LanguageWizardPage.h"
-#include "ui/setupwizard/LoginWizardPage.h"
 #include "ui/setupwizard/PasteWizardPage.h"
 #include "ui/setupwizard/SetupWizard.h"
 #include "ui/setupwizard/ThemeWizardPage.h"
@@ -88,8 +84,10 @@
 
 #include <QAccessible>
 #include <QCommandLineParser>
+#include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFileInfo>
 #include <QFileOpenEvent>
 #include <QIcon>
@@ -99,6 +97,7 @@
 #include <QStringList>
 #include <QStringLiteral>
 #include <QStyleFactory>
+#include <QTimer>
 #include <QTranslator>
 #include <QWindow>
 
@@ -445,10 +444,12 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
      * If there is one, tell it what the user actually wanted to do and exit.
      * We want to initialize this before logging to avoid messing with the log of a potential already running copy.
      */
-    // Keep Cloudy single-instance protection, but do not collide with an older
-    // Prism Launcher process that uses the same data root and version.
-    auto appID =
-        ApplicationId::fromPathAndVersion(QDir::currentPath() + QStringLiteral("-CloudyLauncher"), BuildConfig.printableVersionString());
+    // Keep Cloudy’s single-instance channel distinct from a legacy Prism
+    // process that may still be installed/running against the same data root.
+    // A failed redirect used to call exit(1) before the logger or main window,
+    // which looked like a silent Windows startup failure.
+    const auto cloudyInstanceIdentity = QDir::currentPath() + QStringLiteral("/CloudyLauncher");
+    auto appID = ApplicationId::fromPathAndVersion(cloudyInstanceIdentity, BuildConfig.printableVersionString());
     {
         // FIXME: you can run the same binaries with multiple data dirs and they won't clash. This could cause issues for updates.
         m_peerInstance = new LocalPeer(this, appID);
@@ -499,7 +500,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
                        "Data folder:\n%1")
                         .arg(m_dataPath);
                 std::cerr << "Unable to redirect command to already running instance\n";
-                showFatalErrorMessage(tr("Another Cloudy Launcher process is not responding"), message);
+                showFatalErrorMessage(tr("Cloudy Launcher is already running"), message);
                 return;
             }
         }
@@ -1002,9 +1003,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_instances.reset(new InstanceList(m_settings.get(), allInstDirs, this));
         connect(InstDirSetting.get(), &Setting::SettingChanged, m_instances.get(), &InstanceList::on_InstFolderChanged);
         connect(AdditionalInstanceDirsSetting.get(), &Setting::SettingChanged, m_instances.get(), &InstanceList::on_InstFolderChanged);
-        qInfo() << "Loading Instances...";
-        m_instances->loadList();
-        qInfo() << "<> Instances loaded.";
+        qInfo() << "Instance list prepared; loading is deferred until the Cloudy shell is visible.";
     }
 
     // and accounts
@@ -1013,8 +1012,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         qInfo() << "Loading accounts...";
         m_accounts->setListFilePath("accounts.json", true);
         m_accounts->loadList();
-        m_accounts->fillQueue();
-        qInfo() << "<> Accounts loaded.";
+        qInfo() << "<> Accounts loaded; refresh queue is deferred until the Cloudy shell is visible.";
     }
 
     // init the http meta cache
@@ -1065,10 +1063,14 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 #endif
 
     connect(this, &Application::aboutToQuit, this, [this]() {
+        QElapsedTimer shutdownTimer;
+        shutdownTimer.start();
+        qInfo() << "<> Shutdown started.";
         if (m_instances) {
             // save any remaining instance state
             m_instances->saveNow();
         }
+        qInfo() << "<> Instance state saved in" << shutdownTimer.elapsed() << "ms.";
         if (logFile) {
             logFile->flush();
             logFile->close();
@@ -1077,7 +1079,8 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
     updateCapabilities();
 
-    detectLibraries();
+    // Hardware/library probing is intentionally started after the first Cloudy frame.
+    // It is optional startup work and should not delay the application becoming usable.
 
     // check update locks
     {
@@ -1226,35 +1229,100 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
     performMainStartupAction();
 }
 
+bool Application::checkWebEngineRuntime()
+{
+#if defined(Q_OS_WIN32)
+    const auto applicationDir = QDir(applicationDirPath());
+    QStringList missing;
+
+    const auto requireAnyFile = [&missing](const QDir& directory, const QStringList& fileNames, const QString& description) {
+        for (const auto& fileName : fileNames) {
+            if (QFileInfo::exists(directory.filePath(fileName)))
+                return;
+        }
+        missing.append(directory.filePath(description));
+    };
+
+    requireAnyFile(applicationDir, { QStringLiteral("Qt6WebEngineCore.dll"), QStringLiteral("Qt6WebEngineCored.dll") },
+                   QStringLiteral("Qt6WebEngineCore.dll (or the Debug variant)"));
+    requireAnyFile(applicationDir, { QStringLiteral("Qt6WebEngineWidgets.dll"), QStringLiteral("Qt6WebEngineWidgetsd.dll") },
+                   QStringLiteral("Qt6WebEngineWidgets.dll (or the Debug variant)"));
+
+    const QDir libraryExecutablesDir(QLibraryInfo::path(QLibraryInfo::LibraryExecutablesPath));
+    bool hasWebEngineProcess = false;
+    for (const auto& processName : { QStringLiteral("QtWebEngineProcess.exe"), QStringLiteral("QtWebEngineProcessd.exe") }) {
+        hasWebEngineProcess |= QFileInfo::exists(applicationDir.filePath(processName));
+        hasWebEngineProcess |= QFileInfo::exists(libraryExecutablesDir.filePath(processName));
+    }
+    if (!hasWebEngineProcess) {
+        missing.append(QStringLiteral("QtWebEngineProcess.exe (or the Debug variant; expected beside the launcher or in %1)")
+                           .arg(libraryExecutablesDir.absolutePath()));
+    }
+
+    QDir resourcesDir(applicationDir.filePath(QStringLiteral("resources")));
+    if (!resourcesDir.exists()) {
+        const QDir dataDir(QLibraryInfo::path(QLibraryInfo::DataPath));
+        resourcesDir = QDir(dataDir.filePath(QStringLiteral("resources")));
+    }
+    if (!resourcesDir.exists()) {
+        missing.append(resourcesDir.absolutePath());
+    } else {
+        for (const auto& resource : { QStringLiteral("qtwebengine_resources.pak"), QStringLiteral("qtwebengine_resources_100p.pak"),
+                                      QStringLiteral("qtwebengine_resources_200p.pak"), QStringLiteral("icudtl.dat") }) {
+            if (!QFileInfo::exists(resourcesDir.filePath(resource)))
+                missing.append(resourcesDir.filePath(resource));
+        }
+        requireAnyFile(resourcesDir, { QStringLiteral("v8_context_snapshot.bin"), QStringLiteral("v8_context_snapshot.debug.bin") },
+                       QStringLiteral("v8_context_snapshot.bin (or the Debug variant)"));
+    }
+
+    QDir localesDir(applicationDir.filePath(QStringLiteral("translations/qtwebengine_locales")));
+    if (!localesDir.exists()) {
+        const QDir translationsDir(QLibraryInfo::path(QLibraryInfo::TranslationsPath));
+        localesDir = QDir(translationsDir.filePath(QStringLiteral("qtwebengine_locales")));
+    }
+    if (!localesDir.exists())
+        missing.append(localesDir.absolutePath());
+
+    if (missing.isEmpty())
+        return true;
+
+    const auto missingList = missing.join(QStringLiteral("\\n"));
+    qCritical() << "Qt WebEngine runtime is incomplete. Missing:" << missing;
+    showFatalErrorMessage(
+        tr("Cloudy Launcher cannot start because its WebEngine runtime is incomplete."),
+        tr("The Windows package is missing files required by the embedded interface. Reinstall the latest Cloudy Launcher package instead "
+           "of launching an old desktop shortcut.\\n\\nMissing files or folders:\\n%1\\n\\nExecutable folder:\\n%2")
+            .arg(missingList, applicationDir.absolutePath()));
+    return false;
+#else
+    return true;
+#endif
+}
+
 bool Application::createSetupWizard()
 {
-    bool javaRequired = [this]() {
-        if (BuildConfig.JAVA_DOWNLOADER_ENABLED && settings()->get("AutomaticJavaDownload").toBool()) {
-            return false;
-        }
-        bool ignoreJavaWizard = settings()->get("IgnoreJavaWizard").toBool();
-        if (ignoreJavaWizard) {
-            return false;
-        }
-        QString currentHostName = QHostInfo::localHostName();
-        QString oldHostName = settings()->get("LastHostname").toString();
-        if (currentHostName != oldHostName) {
-            settings()->set("LastHostname", currentHostName);
-            return true;
-        }
-        QString currentJavaPath = settings()->get("JavaPath").toString();
-        QString actualPath = FS::ResolveExecutable(currentJavaPath);
-        return actualPath.isNull();
-    }();
-    bool askjava = BuildConfig.JAVA_DOWNLOADER_ENABLED && !javaRequired && !settings()->get("AutomaticJavaDownload").toBool() &&
-                   !settings()->get("AutomaticJavaSwitch").toBool() && !settings()->get("UserAskedAboutAutomaticJavaDownload").toBool();
-    bool languageRequired = settings()->get("Language").toString().isEmpty();
+    const bool languageWasUnset = settings()->get("Language").toString().isEmpty();
     bool pasteInterventionRequired = settings()->get("PastebinURL") != "";
     bool validWidgets = m_themeManager->isValidApplicationTheme(settings()->get("ApplicationTheme").toString());
     bool validIcons = m_themeManager->isValidIconTheme(settings()->get("IconTheme").toString());
-    bool login = !m_accounts->anyAccountIsValid() && capabilities() & Application::SupportsMSA;
-    bool themeInterventionRequired = !validWidgets || !validIcons;
-    bool wizardRequired = javaRequired || languageRequired || pasteInterventionRequired || themeInterventionRequired || askjava || login;
+    // The first-run wizard must not prevent the user from reaching Cloudy when
+    // Java or an account is not available yet. Those are launch prerequisites,
+    // not reasons to hide the library and the secure account manager.
+    if (languageWasUnset) {
+        settings()->set("Language", QStringLiteral("en_US"));
+    }
+    if (!validWidgets && settings()->get("ApplicationTheme").toString().isEmpty()) {
+        settings()->set("ApplicationTheme", QStringLiteral("dark"));
+        validWidgets = true;
+    }
+    if (!validIcons && settings()->get("IconTheme").toString().isEmpty()) {
+        settings()->set("IconTheme", QStringLiteral("flat"));
+        validIcons = true;
+    }
+
+    const bool themeInterventionRequired = !validWidgets || !validIcons;
+    const bool wizardRequired = pasteInterventionRequired || themeInterventionRequired;
     if (wizardRequired) {
         // set default theme after going into theme wizard
         if (!validIcons)
@@ -1273,16 +1341,6 @@ bool Application::createSetupWizard()
         m_themeManager->applyCurrentlySelectedTheme(true);
 
         m_setupWizard = new SetupWizard(nullptr);
-        if (languageRequired) {
-            m_setupWizard->addPage(new LanguageWizardPage(m_setupWizard));
-        }
-
-        if (javaRequired) {
-            m_setupWizard->addPage(new JavaWizardPage(m_setupWizard));
-        } else if (askjava) {
-            m_setupWizard->addPage(new AutoJavaWizardPage(m_setupWizard));
-        }
-
         if (pasteInterventionRequired) {
             m_setupWizard->addPage(new PasteWizardPage(m_setupWizard));
         }
@@ -1291,14 +1349,11 @@ bool Application::createSetupWizard()
             m_setupWizard->addPage(new ThemeWizardPage(m_setupWizard));
         }
 
-        if (login) {
-            m_setupWizard->addPage(new LoginWizardPage(m_setupWizard));
-        }
         connect(m_setupWizard, &QDialog::finished, this, &Application::setupWizardFinished);
         m_setupWizard->show();
     }
 
-    return wizardRequired || login;
+    return wizardRequired;
 }
 
 bool Application::updaterEnabled()
@@ -1353,7 +1408,16 @@ void Application::setupWizardFinished(int status)
 
 void Application::performMainStartupAction()
 {
+    if (!checkWebEngineRuntime())
+        return;
+
     m_status = Application::Initialized;
+    // Command-line launch/show requests need the model before resolving their id.
+    // Normal startup remains deferred until after the first Cloudy frame.
+    if ((!m_instanceIdToLaunch.isEmpty() || !m_instanceIdToShowWindowOf.isEmpty()) && m_instances && !m_instancesLoaded) {
+        m_instances->loadList();
+        m_instancesLoaded = true;
+    }
     if (!m_instanceIdToLaunch.isEmpty()) {
         auto inst = instances()->getInstanceById(m_instanceIdToLaunch);
         if (inst) {
@@ -1398,6 +1462,25 @@ void Application::performMainStartupAction()
         showMainWindow(false);
         qDebug() << "<> Main window shown.";
     }
+
+    // Load mutable data only after the first frame is on screen. This keeps the
+    // Cloudy shell responsive while preserving all model mutations on the GUI thread.
+    QTimer::singleShot(0, this, [this]() {
+        QElapsedTimer startupTimer;
+        startupTimer.start();
+        qInfo() << "<> Deferred startup work started.";
+        if (m_instances && !m_instancesLoaded) {
+            m_instances->loadList();
+            m_instancesLoaded = true;
+            emit instancesLoaded();
+            qInfo() << "<> Instances loaded in" << startupTimer.elapsed() << "ms.";
+        }
+        if (m_accounts) {
+            m_accounts->fillQueue();
+        }
+        detectLibraries();
+        qInfo() << "<> Deferred startup work completed in" << startupTimer.elapsed() << "ms.";
+    });
 
     // initialize the updater
     if (updaterEnabled()) {
@@ -1525,6 +1608,9 @@ JavaInstallList* Application::javalist()
 
 QIcon Application::logo()
 {
+    const QIcon cloudyIcon(QStringLiteral(":/cloudy-web/cloudy-icon.png"));
+    if (!cloudyIcon.isNull())
+        return cloudyIcon;
     return QIcon(":/" + BuildConfig.LAUNCHER_SVGFILENAME);
 }
 
@@ -1661,10 +1747,13 @@ void Application::controllerFinished()
     extras.controller.reset();
     subRunningInstance();
 
-    // quit when there are no more windows.
-    if (shouldExitNow()) {
+    // Quit on the next event turn so WebEngine/task callbacks are not
+    // destroyed from inside the launch completion signal.
+    if (shouldExitNow() && !m_quitRequested) {
         m_status = wasSuccessful ? Succeeded : Failed;
-        exit(wasSuccessful ? 0 : 1);
+        m_quitRequested = true;
+        const int exitCode = wasSuccessful ? 0 : 1;
+        QMetaObject::invokeMethod(this, [exitCode] { QCoreApplication::exit(exitCode); }, Qt::QueuedConnection);
     }
 }
 
@@ -1674,18 +1763,18 @@ void Application::ShowGlobalSettings(class QWidget* parent, QString open_page)
         return;
 
     emit globalSettingsAboutToOpen();
-    auto* dialog = new PageDialog(m_globalSettingsProvider.get(), open_page, parent);
 
     if (auto* mainWindow = qobject_cast<MainWindow*>(parent)) {
-        // PageDialog already contains the real settings pages. Turn it into an in-app page
-        // rather than duplicating settings logic or exposing credentials to the UI layer.
-        dialog->setWindowFlags(Qt::Widget);
-        dialog->setAttribute(Qt::WA_DeleteOnClose);
-        mainWindow->showEmbeddedPage(dialog);
+        // PageDialog is explicitly created as an embedded widget. Its PageContainer
+        // remains the single settings surface inside the Cloudy workspace.
+        auto* dialog = new PageDialog(m_globalSettingsProvider.get(), open_page, mainWindow, true);
+        connect(dialog, &PageDialog::applied, this, &Application::globalSettingsApplied);
         connect(dialog, &QDialog::finished, mainWindow, [mainWindow] { mainWindow->restoreMainContent(); });
-        dialog->show();
+        mainWindow->showEmbeddedPage(dialog);
         return;
     }
+
+    auto* dialog = new PageDialog(m_globalSettingsProvider.get(), open_page, parent);
 
     SettingsObject::Lock lock(APPLICATION->settings());
     connect(dialog, &PageDialog::applied, this, &Application::globalSettingsApplied);
@@ -1732,10 +1821,21 @@ ViewLogWindow* Application::showLogWindow()
     return m_viewLogWindow;
 }
 
-InstanceWindow* Application::showInstanceWindow(MinecraftInstance* instance, QString page)
+InstanceWindow* Application::showInstanceWindow(MinecraftInstance* instance, QString page, bool embedded)
 {
     if (!instance)
         return nullptr;
+
+    if (embedded) {
+        // Embedded editors are owned by MainWindow's content stack, not by the
+        // top-level window counter or instance extras map used for console windows.
+        auto* window = new InstanceWindow(instance, nullptr, true);
+        if (!page.isEmpty()) {
+            window->selectPage(page);
+        }
+        return window;
+    }
+
     auto id = instance->id();
     QMutexLocker locker(&m_instanceExtrasMutex);
     auto& extras = m_instanceExtras[id];
@@ -1790,9 +1890,12 @@ void Application::on_windowClose()
     if (logWindow) {
         m_viewLogWindow = nullptr;
     }
-    // quit when there are no more windows.
-    if (shouldExitNow()) {
-        exit(0);
+    // quit when there are no more windows. Queue the exit so Qt can finish
+    // dispatching the close event and any pending page cleanup first.
+    if (shouldExitNow() && !m_quitRequested) {
+        m_quitRequested = true;
+        qInfo() << "<> Last Cloudy window closed; scheduling application quit.";
+        QMetaObject::invokeMethod(this, [this]() { QCoreApplication::exit(0); }, Qt::QueuedConnection);
     }
 }
 

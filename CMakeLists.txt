@@ -317,6 +317,8 @@ if(Launcher_QT_VERSION_MAJOR EQUAL 6)
             OpenGL
             Test
             Widgets
+            WebChannel
+            WebEngineWidgets
             Xml
         HINTS
             C:/Qt/*/*/lib/cmake

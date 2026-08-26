@@ -34,7 +34,7 @@ class SkinManageDialog;
 class SkinManageDialog : public QDialog, public SkinProvider {
     Q_OBJECT
    public:
-    explicit SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct);
+    explicit SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct, bool embedded = false);
     virtual ~SkinManageDialog();
     void resizeEvent(QResizeEvent* event) override;
 
@@ -63,6 +63,7 @@ class SkinManageDialog : public QDialog, public SkinProvider {
 
    private:
     MinecraftAccountPtr m_acct;
+    bool m_embedded = false;
     Ui::SkinManageDialog* m_ui;
     SkinList m_list;
     QString m_selectedSkinKey;
