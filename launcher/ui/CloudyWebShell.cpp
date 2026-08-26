@@ -20,6 +20,7 @@
 #include <QMimeDatabase>
 #include <QPalette>
 #include <QResizeEvent>
+#include <QTimer>
 #include <QUrl>
 #include <QWebChannel>
 #include <QWebEnginePage>
@@ -31,6 +32,7 @@
 #include <QWebEngineView>
 
 #include <mutex>
+#include <utility>
 
 namespace {
 
@@ -76,7 +78,10 @@ QString buildCloudyDocument()
 
 class CloudyResourceHandler final : public QWebEngineUrlSchemeHandler {
    public:
-    explicit CloudyResourceHandler(QObject* parent = nullptr) : QWebEngineUrlSchemeHandler(parent) {}
+    explicit CloudyResourceHandler(QByteArray document, QObject* parent = nullptr)
+        : QWebEngineUrlSchemeHandler(parent), m_document(std::move(document))
+    {
+    }
 
     void requestStarted(QWebEngineUrlRequestJob* job) override
     {
@@ -87,12 +92,20 @@ class CloudyResourceHandler final : public QWebEngineUrlSchemeHandler {
             return;
         }
 
+        const bool isIndex = path.isEmpty() || path == QStringLiteral("/") || path == QStringLiteral("/index.html");
+        if (isIndex) {
+            auto* buffer = new QBuffer(job);
+            buffer->setData(m_document);
+            buffer->open(QIODevice::ReadOnly);
+            job->reply(QByteArrayLiteral("text/html"), buffer);
+            return;
+        }
+
         QString resourcePath;
         if (path == QStringLiteral("/qwebchannel.js")) {
             resourcePath = QStringLiteral(":/qtwebchannel/qwebchannel.js");
         } else {
-            const auto normalizedPath = path.isEmpty() || path == QStringLiteral("/") ? QStringLiteral("/index.html") : path;
-            resourcePath = QStringLiteral(":/cloudy-web") + normalizedPath;
+            resourcePath = QStringLiteral(":/cloudy-web") + path;
         }
 
         QFile resource(resourcePath);
@@ -119,6 +132,9 @@ class CloudyResourceHandler final : public QWebEngineUrlSchemeHandler {
 
         job->reply(mimeType, buffer);
     }
+
+   private:
+    QByteArray m_document;
 };
 
 void registerCloudyScheme()
@@ -136,7 +152,7 @@ QString cloudyNativeStyleSheet()
 {
     const auto applicationTheme = APPLICATION && APPLICATION->settings() ? APPLICATION->settings()->get("ApplicationTheme").toString() : QString();
     if (applicationTheme != QStringLiteral("dark")) {
-        // Named user themes remain fully controlled by Prism/Cloudy ThemeManager.
+        // Named user themes remain fully controlled by Cloudy ThemeManager.
         return {};
     }
 
@@ -195,14 +211,36 @@ CloudyWebShell::CloudyWebShell(MainWindow* window, QWidget* parent) : QWidget(pa
     m_webView->settings()->setAttribute(QWebEngineSettings::LocalContentCanAccessRemoteUrls, false);
     m_webView->settings()->setAttribute(QWebEngineSettings::LocalContentCanAccessFileUrls, false);
     m_webView->settings()->setAttribute(QWebEngineSettings::JavascriptCanOpenWindows, false);
-    m_webView->page()->profile()->installUrlSchemeHandler(QByteArrayLiteral("cloudy"), new CloudyResourceHandler(m_webView->page()->profile()));
+    const auto document = buildCloudyDocument();
+    const auto initialDocument = document.isEmpty()
+                                     ? QByteArrayLiteral(
+                                           "<!doctype html><meta charset=\"utf-8\"><title>Cloudy Launcher</title>"
+                                           "<style>body{margin:0;background:#0a1220;color:#f3f7ff;font:16px system-ui;padding:32px}h1{font-weight:600}</style>"
+                                           "<h1>Cloudy Launcher</h1><p>The embedded workspace could not be loaded. Check the installation files and restart Cloudy.</p>")
+                                     : document.toUtf8();
+    if (document.isEmpty())
+        qCritical() << "Cloudy embedded start document is empty.";
+    m_webView->page()->profile()->installUrlSchemeHandler(QByteArrayLiteral("cloudy"),
+                                                          new CloudyResourceHandler(initialDocument, m_webView->page()->profile()));
     m_webView->setGeometry(rect());
 
     m_channel = new QWebChannel(m_webView);
     m_bridge = new CloudyWebBridge(window, m_channel);
     m_channel->registerObject(QStringLiteral("cloudy"), m_bridge);
     m_webView->page()->setWebChannel(m_channel);
-    m_webView->setHtml(buildCloudyDocument(), QUrl(QStringLiteral("cloudy://shell/")));
+    connect(m_webView, &QWebEngineView::loadFinished, this, [](bool ok) {
+        if (!ok)
+            qCritical() << "Cloudy WebEngine failed to render its embedded start page.";
+    });
+
+    // Let the top-level window enter the event loop before starting WebEngine's
+    // first navigation. This avoids a Windows startup race where the process
+    // appears briefly in Task Manager but the initial document never paints.
+    QTimer::singleShot(0, this, [this] {
+        if (!m_webView)
+            return;
+        m_webView->setUrl(QUrl(QStringLiteral("cloudy://shell/index.html")));
+    });
 }
 
 QRect CloudyWebShell::nativeContentRect() const

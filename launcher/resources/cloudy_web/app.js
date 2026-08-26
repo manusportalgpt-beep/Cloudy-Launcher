@@ -4,6 +4,7 @@
   const workspace = document.getElementById("workspace");
   const crumb = document.getElementById("crumb");
   const profileName = document.getElementById("profile-name");
+  const profileSubtitle = document.getElementById("profile-subtitle");
   const profileAvatar = document.getElementById("profile-avatar");
   const profileAvatarLetter = document.getElementById("profile-avatar-letter");
   const profileAvatarImage = document.getElementById("profile-avatar-image");
@@ -72,6 +73,7 @@
       accounts: Array.isArray(bridge?.accountData) ? bridge.accountData : [],
       account: bridge?.activeAccount || "",
       hasAccount: Boolean(bridge?.hasActiveAccount),
+      firstRun: Boolean(bridge?.firstRun),
       palette: bridge?.paletteData || {},
       weatherTheme: readWeatherTheme(),
       snowVariant: readSnowVariant(),
@@ -111,7 +113,7 @@
     import: "data:image/svg+xml;base64,CLOUDY_PROVIDER_IMPORT",
   };
 
-  const renderHome = ({ instances, account, hasAccount }) => {
+  const renderHome = ({ instances, account, hasAccount, firstRun, accounts }) => {
     const running = instances.filter((item) => item.running).length;
     const runningText = running ? `${running} ${running === 1 ? "instance is" : "instances are"} currently running` : "No instances are currently running";
     const cards = instances.map((item) => `
@@ -130,6 +132,22 @@
           </div>
         </div>
       </article>`).join("");
+
+    if (firstRun) {
+      const firstFace = accounts.find((item) => item.active)?.face || accounts[0]?.face;
+      const welcomeAvatar = firstFace
+        ? `<img class="welcome-face" src="${escapeHtml(firstFace)}" alt="Minecraft profile face loaded from UUID">`
+        : `<span class="welcome-avatar-fallback">C</span>`;
+      workspace.innerHTML = `
+        <section class="page welcome-page">
+          <div class="welcome-shell">
+            <div class="welcome-art" aria-hidden="true"><span class="welcome-orbit orbit-one"></span><span class="welcome-orbit orbit-two"></span><div class="welcome-cloud-shape"></div></div>
+            <div class="welcome-copy"><p class="eyebrow">First launch</p><h1>Welcome to Cloudy.</h1><p class="lead">Your workspace is ready. Add a secure account to load the real Minecraft profile face by UUID, or create your first instance through the verified native builder.</p><div class="welcome-actions">${shellButton("Add Microsoft account", "open-accounts", "primary")}${shellButton("Create an instance", "new", "quiet")}</div><div class="welcome-note"><span class="welcome-note-mark">01</span><span>Nothing is copied or faked here. Licensed account data and the UUID skin face appear after the native account flow completes.</span></div></div>
+            <div class="welcome-profile"><span class="welcome-avatar">${welcomeAvatar}</span><strong>${firstFace ? "Profile face loaded" : "Profile face ready"}</strong><small>${firstFace ? "Loaded from the active UUID" : "Appears after secure account sync"}</small></div>
+          </div>
+        </section>`;
+      return;
+    }
 
     const accountText = hasAccount ? escapeHtml(account) : "Connect an account in Accounts";
     workspace.innerHTML = `
@@ -241,7 +259,8 @@
     const activeAccount = currentState.accounts.find((item) => item.active) || currentState.accounts[0];
     const running = currentState.instances.filter((item) => item.running).length;
     topbarRunningText.textContent = running ? `${running} ${running === 1 ? "instance is" : "instances are"} currently running` : "No instances are currently running";
-    profileName.textContent = currentState.hasAccount ? currentState.account : "No account";
+    profileName.textContent = currentState.firstRun ? "Cloudy profile" : currentState.hasAccount ? currentState.account : "No account";
+    profileSubtitle.textContent = currentState.firstRun ? "First launch" : currentState.hasAccount ? "Minecraft account" : "Connect account";
     profileAvatarLetter.textContent = (currentState.account || "C").slice(0, 1).toUpperCase();
     if (activeAccount?.face) {
       profileAvatarImage.src = activeAccount.face;

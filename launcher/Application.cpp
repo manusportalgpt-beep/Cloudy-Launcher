@@ -440,12 +440,12 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
     m_dataPath = dataPath;
 
     /*
-     * Establish the mechanism for communication with an already running PrismLauncher that uses the same data path.
-     * If there is one, tell it what the user actually wanted to do and exit.
-     * We want to initialize this before logging to avoid messing with the log of a potential already running copy.
+     * Establish the mechanism for communication with another Cloudy process
+     * that uses the same data path. If there is one, tell it what the user
+     * actually wanted to do and exit before touching its log.
      */
-    // Keep Cloudy’s single-instance channel distinct from a legacy Prism
-    // process that may still be installed/running against the same data root.
+    // Keep Cloudy’s single-instance channel distinct from an older process
+    // that may still be installed/running against the same data root.
     // A failed redirect used to call exit(1) before the logger or main window,
     // which looked like a silent Windows startup failure.
     const auto cloudyInstanceIdentity = QDir::currentPath() + QStringLiteral("/CloudyLauncher");
@@ -645,7 +645,12 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
     // Initialize application settings
     {
         // Provide a fallback for migration from PolyMC
-        m_settings.reset(new INISettingsObject({ BuildConfig.LAUNCHER_CONFIGFILE, "polymc.cfg", "multimc.cfg" }, this));
+        // The Cloudy filename is always preferred. The compatibility entry is
+        // read only to migrate an existing installation into the new filename.
+        m_settings.reset(new INISettingsObject(
+            { BuildConfig.LAUNCHER_CONFIGFILE, QStringLiteral("prismlauncher.cfg"), QStringLiteral("polymc.cfg"), QStringLiteral("multimc.cfg") },
+            this));
+        m_firstRun = !QFileInfo::exists(FS::PathCombine(m_dataPath, BuildConfig.LAUNCHER_CONFIGFILE));
 
         // Theming
         m_settings->registerSetting("IconTheme", QString());

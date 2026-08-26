@@ -371,15 +371,8 @@ Section "@Launcher_DisplayName@"
   SectionIn RO
 
   nsExec::Exec /TIMEOUT=2000 'TaskKill /IM @Launcher_APP_BINARY_NAME@.exe /F'
-  nsExec::Exec /TIMEOUT=2000 'TaskKill /IM prismlauncher.exe /F'
 
   SetOutPath $INSTDIR
-
-  ; Remove binaries left by pre-rebrand Cloudy packages. The desktop and Start
-  ; Menu shortcuts below are recreated with the current CloudyLauncher target.
-  Delete "$INSTDIR\prismlauncher.exe"
-  Delete "$INSTDIR\prismlauncher_filelink.exe"
-  Delete "$INSTDIR\prismlauncher_updater.exe"
 
   File "@Launcher_APP_BINARY_NAME@.exe"
   File "@Launcher_APP_BINARY_NAME@_filelink.exe"
@@ -406,13 +399,9 @@ Section "@Launcher_DisplayName@"
   WriteRegStr HKCU Software\Classes\curseforge "URL Protocol" ""
   WriteRegStr HKCU Software\Classes\curseforge\shell\open\command "" '"$INSTDIR\@Launcher_APP_BINARY_NAME@.exe" "%1"'
 
-  ; Write the URL Handler into registry for prismlauncher
+  ; Write the URL Handler into registry for Cloudy Launcher
   WriteRegStr HKCU Software\Classes\@Launcher_APP_BINARY_NAME@ "URL Protocol" ""
   WriteRegStr HKCU Software\Classes\@Launcher_APP_BINARY_NAME@\shell\open\command "" '"$INSTDIR\@Launcher_APP_BINARY_NAME@.exe" "%1"'
-
-  ; Write the URL Handler into registry for prismlauncher import
-  WriteRegStr HKCU Software\Classes\prismlauncher "URL Protocol" ""
-  WriteRegStr HKCU Software\Classes\prismlauncher\shell\open\command "" '"$INSTDIR\@Launcher_APP_BINARY_NAME@.exe" "%1"'
 
   ; Write the uninstall keys for Windows
   ; https://learn.microsoft.com/en-us/windows/win32/msi/uninstall-registry-key

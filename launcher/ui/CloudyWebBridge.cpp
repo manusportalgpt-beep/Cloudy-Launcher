@@ -100,6 +100,11 @@ bool CloudyWebBridge::hasActiveAccount() const
     return !activeAccount().isEmpty();
 }
 
+bool CloudyWebBridge::firstRun() const
+{
+    return APPLICATION && APPLICATION->isFirstRun();
+}
+
 QVariantMap CloudyWebBridge::paletteData() const
 {
     QVariantMap result;

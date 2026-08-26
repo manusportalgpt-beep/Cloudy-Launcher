@@ -120,6 +120,7 @@ class Application : public QApplication {
 
     SettingsObject* settings() const { return m_settings.get(); }
     SettingsObject* playtimeSettings() const { return m_playtimeSettings.get(); }
+    bool isFirstRun() const { return m_firstRun; }
 
     qint64 timeSinceStart() const { return m_startTime.msecsTo(QDateTime::currentDateTime()); }
 
@@ -275,6 +276,7 @@ class Application : public QApplication {
 
     QString m_rootPath;
     QString m_dataPath;
+    bool m_firstRun = false;
     Status m_status = Application::StartingUp;
     Capabilities m_capabilities;
     bool m_portable = false;

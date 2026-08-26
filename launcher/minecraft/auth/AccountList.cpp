@@ -446,6 +446,16 @@ bool AccountList::loadList()
     }
 
     QFile file(m_listFilePath);
+    if (!file.exists()) {
+        // A missing account list is the normal state on a brand-new install.
+        // Keep the model empty so the Cloudy welcome page can offer the native
+        // secure account flow instead of reporting a startup failure.
+        beginResetModel();
+        m_accounts.clear();
+        m_defaultAccount = nullptr;
+        endResetModel();
+        return true;
+    }
 
     // Try to open the file and fail if we can't.
     // TODO: We should probably report this error to the user.

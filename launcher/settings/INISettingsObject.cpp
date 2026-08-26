@@ -29,7 +29,7 @@ INISettingsObject::INISettingsObject(QStringList paths, QObject* parent) : Setti
         if (path != first_path && QFile::exists(path)) {
             // Copy the fallback to the preferred path.
             QFile::copy(path, first_path);
-            qDebug() << "Copied settings from" << path << "to" << first_path;
+            qDebug() << "Migrated existing settings into the Cloudy configuration.";
             break;
         }
     }

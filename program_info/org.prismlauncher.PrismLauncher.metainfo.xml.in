@@ -9,7 +9,7 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-only</project_license>
   <description>
-    <p>Cloudy Launcher is a GPL-3.0 fork of Prism Launcher focused on a connected, calm workspace for managing Minecraft instances.</p>
+    <p>Cloudy Launcher is a GPL-3.0 fork focused on a connected, calm workspace for managing Minecraft instances.</p>
     <p>Features:</p>
     <ul>
       <li>Easily install game modifications, such as Fabric, Forge and Quilt</li>
