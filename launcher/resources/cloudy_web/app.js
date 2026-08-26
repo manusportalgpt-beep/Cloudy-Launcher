@@ -210,6 +210,9 @@
       if (action === "open-mods") { setRoute("mods"); callNative("openMods", id); }
       if (action === "files") setRoute("files");
       if (action === "open-files") { setRoute("files"); callNative("openFiles", id); }
+      if (action === "window-minimize") { callNative("minimizeWindow"); }
+      if (action === "window-toggle-maximize") { callNative("toggleMaximizeWindow"); }
+      if (action === "window-close") { callNative("closeWindow"); }
       if (action === "launch") { callNative("launchInstance", id); }
       if (action === "refresh") { callNative("refreshInstances"); }
       event.stopPropagation();
@@ -221,6 +224,11 @@
       callNative("selectInstance", card.dataset.instanceId);
       setRoute("home");
     }
+  });
+
+  const topbar = document.querySelector(".topbar");
+  topbar?.addEventListener("pointerdown", (event) => {
+    if (event.button === 0 && !event.target.closest("button")) callNative("beginWindowDrag");
   });
 
   document.addEventListener("input", (event) => {

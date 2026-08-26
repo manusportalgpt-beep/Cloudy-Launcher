@@ -21,6 +21,7 @@
 #include <QMetaObject>
 #include <QPalette>
 #include <QVariantMap>
+#include <QWindow>
 
 CloudyWebBridge::CloudyWebBridge(MainWindow* window, QObject* parent) : QObject(parent), m_window(window) {}
 
@@ -162,4 +163,32 @@ void CloudyWebBridge::changeSelectedIcon()
 void CloudyWebBridge::openLauncherFolder()
 {
     invokeWindowAction("on_actionViewLauncherRootFolder_triggered");
+}
+
+void CloudyWebBridge::minimizeWindow()
+{
+    if (m_window)
+        m_window->showMinimized();
+}
+
+void CloudyWebBridge::toggleMaximizeWindow()
+{
+    if (!m_window)
+        return;
+    if (m_window->isMaximized())
+        m_window->showNormal();
+    else
+        m_window->showMaximized();
+}
+
+void CloudyWebBridge::closeWindow()
+{
+    if (m_window)
+        m_window->close();
+}
+
+void CloudyWebBridge::beginWindowDrag()
+{
+    if (m_window && m_window->windowHandle())
+        m_window->windowHandle()->startSystemMove();
 }

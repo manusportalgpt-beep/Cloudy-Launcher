@@ -136,14 +136,16 @@ QString cloudyNativeStyleSheet()
         return {};
     }
 
-    const auto window = QStringLiteral("#101316");
-    const auto surface = QStringLiteral("#161a1e");
-    const auto text = QStringLiteral("#f3f5f7");
-    const auto muted = QStringLiteral("#a8b1ba");
-    const auto line = QStringLiteral("#46515b");
-    const auto highlight = QStringLiteral("#39444e");
+    const auto window = QStringLiteral("#0a1220");
+    const auto surface = QStringLiteral("#0f1a2b");
+    const auto text = QStringLiteral("#f3f7ff");
+    const auto muted = QStringLiteral("#b0c1d8");
+    const auto line = QStringLiteral("#3b5575");
+    const auto highlight = QStringLiteral("#1b304d");
     return QStringLiteral(
                "QWidget#cloudyNativePage { background: %1; color: %2; }"
+               "QWidget#cloudyNativePage QScrollArea, QWidget#cloudyNativePage QScrollArea > QWidget > QWidget, QWidget#cloudyNativePage QStackedWidget { background: %1; border: 0; }"
+               "QWidget#cloudyNativePage QGroupBox { color: %2; background: %1; border: 1px solid %3; border-radius: 8px; margin-top: 10px; padding-top: 10px; }"
                "QWidget#cloudyNativePage QLabel { color: %2; }"
                "QWidget#cloudyNativePage #cloudySettingsHeader { background: %1; border-bottom: 1px solid %3; }"
                "QWidget#cloudyNativePage #cloudyPageTitle { font-size: 16px; font-weight: 650; padding: 2px 0; }"
@@ -223,7 +225,23 @@ void CloudyWebShell::showNativePage(QWidget* page)
     m_nativePage->setObjectName(QStringLiteral("cloudyNativePage"));
     m_nativePage->setWindowFlags(Qt::Widget);
     m_nativePage->setAttribute(Qt::WA_DeleteOnClose, false);
-    m_nativePage->setStyleSheet(cloudyNativeStyleSheet());
+    const auto nativeStyle = cloudyNativeStyleSheet();
+    if (!nativeStyle.isEmpty()) {
+        QPalette nativePalette = m_nativePage->palette();
+        nativePalette.setColor(QPalette::Window, QColor(QStringLiteral("#0a1220")));
+        nativePalette.setColor(QPalette::Base, QColor(QStringLiteral("#0f1a2b")));
+        nativePalette.setColor(QPalette::AlternateBase, QColor(QStringLiteral("#112039")));
+        nativePalette.setColor(QPalette::Button, QColor(QStringLiteral("#14233a")));
+        nativePalette.setColor(QPalette::Text, QColor(QStringLiteral("#f3f7ff")));
+        nativePalette.setColor(QPalette::WindowText, QColor(QStringLiteral("#f3f7ff")));
+        nativePalette.setColor(QPalette::ButtonText, QColor(QStringLiteral("#f3f7ff")));
+        nativePalette.setColor(QPalette::Highlight, QColor(QStringLiteral("#1b304d")));
+        nativePalette.setColor(QPalette::HighlightedText, QColor(QStringLiteral("#ffffff")));
+        m_nativePage->setPalette(nativePalette);
+        for (auto* child : m_nativePage->findChildren<QWidget*>())
+            child->setPalette(nativePalette);
+    }
+    m_nativePage->setStyleSheet(nativeStyle);
     m_nativePage->setGeometry(nativeContentRect());
     m_nativePage->raise();
     m_nativePage->show();

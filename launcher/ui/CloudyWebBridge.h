@@ -58,6 +58,10 @@ class CloudyWebBridge : public QObject {
     void refreshInstances();
     void changeSelectedIcon();
     void openLauncherFolder();
+    void minimizeWindow();
+    void toggleMaximizeWindow();
+    void closeWindow();
+    void beginWindowDrag();
 
    signals:
     void stateChanged();

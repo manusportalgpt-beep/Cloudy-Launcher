@@ -226,6 +226,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     setWindowIcon(APPLICATION->logo());
     setWindowTitle(QStringLiteral("Cloudy Launcher"));
+    setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
     setMinimumSize(QSize(1120, 720));
 
     // Cloudy is one workspace, not a collection of QMainWindow toolbars.
