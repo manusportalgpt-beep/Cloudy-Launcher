@@ -25,7 +25,9 @@ set(Launcher_Copyright "© 2022-2026 Prism Launcher Contributors\\n© 2021-2022 
 set(Launcher_Copyright_Mac "© 2022-2026 Prism Launcher Contributors, © 2021-2022 PolyMC Contributors and © 2012-2021 MultiMC Contributors" PARENT_SCOPE)
 set(Launcher_Copyright "${Launcher_Copyright}" PARENT_SCOPE)
 set(Launcher_UserAgent "${Launcher_CommonName}/${Launcher_VERSION_NAME}" PARENT_SCOPE)
-set(Launcher_ConfigFile "${Launcher_APP_BINARY_NAME}.cfg" PARENT_SCOPE)
+# Preserve the existing settings filename while the executable is rebranded.
+# Instances, accounts and themes remain in the same data root.
+set(Launcher_ConfigFile "prismlauncher.cfg" PARENT_SCOPE)
 set(Launcher_AppID "${Launcher_AppID}" PARENT_SCOPE)
 set(Launcher_SVGFileName "${Launcher_SVGFileName}" PARENT_SCOPE)
 

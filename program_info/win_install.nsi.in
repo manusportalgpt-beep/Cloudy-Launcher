@@ -371,8 +371,15 @@ Section "@Launcher_DisplayName@"
   SectionIn RO
 
   nsExec::Exec /TIMEOUT=2000 'TaskKill /IM @Launcher_APP_BINARY_NAME@.exe /F'
+  nsExec::Exec /TIMEOUT=2000 'TaskKill /IM prismlauncher.exe /F'
 
   SetOutPath $INSTDIR
+
+  ; Remove binaries left by pre-rebrand Cloudy packages. The desktop and Start
+  ; Menu shortcuts below are recreated with the current CloudyLauncher target.
+  Delete "$INSTDIR\prismlauncher.exe"
+  Delete "$INSTDIR\prismlauncher_filelink.exe"
+  Delete "$INSTDIR\prismlauncher_updater.exe"
 
   File "@Launcher_APP_BINARY_NAME@.exe"
   File "@Launcher_APP_BINARY_NAME@_filelink.exe"

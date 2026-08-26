@@ -374,7 +374,9 @@ include(ECMQtDeclareLoggingCategory)
 
 ####################################### Program Info #######################################
 
-set(Launcher_APP_BINARY_NAME "prismlauncher" CACHE STRING "Name of the Launcher binary")
+# The installed executable and generated shortcuts must use the fork's identity.
+# Keep the legacy config filename separately in program_info so existing settings remain readable.
+set(Launcher_APP_BINARY_NAME "CloudyLauncher" CACHE STRING "Name of the Launcher binary")
 add_subdirectory(program_info)
 
 ####################################### Install layout #######################################

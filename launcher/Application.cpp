@@ -445,7 +445,10 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
      * If there is one, tell it what the user actually wanted to do and exit.
      * We want to initialize this before logging to avoid messing with the log of a potential already running copy.
      */
-    auto appID = ApplicationId::fromPathAndVersion(QDir::currentPath(), BuildConfig.printableVersionString());
+    // Keep Cloudy single-instance protection, but do not collide with an older
+    // Prism Launcher process that uses the same data root and version.
+    auto appID =
+        ApplicationId::fromPathAndVersion(QDir::currentPath() + QStringLiteral("-CloudyLauncher"), BuildConfig.printableVersionString());
     {
         // FIXME: you can run the same binaries with multiple data dirs and they won't clash. This could cause issues for updates.
         m_peerInstance = new LocalPeer(this, appID);
@@ -490,9 +493,14 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
                 m_status = Application::Succeeded;
                 return;
             } else {
+                const auto message =
+                    tr("Cloudy Launcher found another Cloudy process using this data folder, but that process did not respond.\n\n"
+                       "Close any stale CloudyLauncher.exe process in Task Manager and start Cloudy Launcher again.\n\n"
+                       "Data folder:\n%1")
+                        .arg(m_dataPath);
                 std::cerr << "Unable to redirect command to already running instance\n";
-                // C function not Qt function - event loop not started yet
-                ::exit(1);
+                showFatalErrorMessage(tr("Another Cloudy Launcher process is not responding"), message);
+                return;
             }
         }
     }
@@ -1684,7 +1692,6 @@ void Application::ShowGlobalSettings(class QWidget* parent, QString open_page)
     dialog->exec();
     delete dialog;
 }
-
 
 MainWindow* Application::showMainWindow(bool minimized)
 {
