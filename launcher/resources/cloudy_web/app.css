@@ -166,7 +166,17 @@ h2 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
 .ambient-art { width: 100%; height: 100%; object-fit: contain; display: block; }
 .cloud-one { width: 270px; height: 160px; right: 5%; bottom: -30px; animation: drift 19s ease-in-out infinite; }
 .cloud-two { width: 180px; height: 110px; left: 8%; top: 18%; opacity: .035; animation: drift 25s ease-in-out -9s infinite reverse; }
+.particle-field { position: fixed; inset: 38px 0 0 54px; pointer-events: none; z-index: 0; overflow: hidden; }
+.particle { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #e5e9ee; opacity: .22; animation: particleFloat 12s ease-in-out infinite; }
+.p1 { left: 18%; top: 22%; animation-delay: -2s; }
+.p2 { left: 42%; top: 38%; animation-duration: 16s; animation-delay: -9s; }
+.p3 { left: 67%; top: 26%; animation-duration: 14s; animation-delay: -5s; }
+.p4 { left: 76%; top: 66%; animation-duration: 18s; animation-delay: -12s; }
+.p5 { left: 31%; top: 74%; animation-duration: 15s; animation-delay: -7s; }
+.p6 { left: 88%; top: 48%; animation-duration: 13s; animation-delay: -10s; }
 @keyframes drift { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(14px, -8px, 0); } }
+@keyframes particleFloat { 0%, 100% { transform: translate3d(0, 5px, 0); opacity: .12; } 50% { transform: translate3d(10px, -14px, 0); opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .ambient-cloud, .particle { animation: none; } }
 
 @media (max-width: 860px) {
   .workspace { padding: 22px 24px 38px; }
