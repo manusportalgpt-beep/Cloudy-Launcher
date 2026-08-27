@@ -477,3 +477,18 @@ html[data-weather-theme="snow"][data-snow-variant="light"] .welcome-shell, html[
 .icon-mods::after { content: ""; position: absolute; left: 8px; top: 2px; width: 3px; height: 15px; border-left: 1.5px solid currentColor; border-right: 1.5px solid currentColor; transform: rotate(45deg); }
 .icon-files::before { content: ""; position: absolute; left: 3px; right: 3px; top: 2px; bottom: 2px; border: 1.5px solid currentColor; border-radius: 3px; }
 .icon-files::after { content: ""; position: absolute; left: 6px; right: 6px; top: 7px; height: 1.5px; background: currentColor; box-shadow: 0 4px currentColor; }
+
+.instance-detail-page { max-width: 1120px; }
+.instance-detail-hero { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 24px; padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(135deg, var(--surface-2), var(--surface-soft)); box-shadow: var(--shadow); }
+.instance-detail-identity { min-width: 0; display: flex; align-items: center; gap: 18px; }
+.instance-detail-art { width: 88px; height: 88px; flex: 0 0 88px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line-strong); border-radius: 18px; background: var(--surface-3); color: var(--cloud); font-size: 30px; font-weight: 700; }
+.instance-detail-icon { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.instance-detail-placeholder { display: grid; place-items: center; width: 100%; height: 100%; }
+.instance-detail-identity h2 { margin: 9px 0 4px; font-size: 22px; letter-spacing: -.02em; }
+.status-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 10px; }
+.instance-detail-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, .46fr); gap: 12px; margin-top: 12px; }
+@media (max-width: 760px) { .instance-detail-hero, .detail-grid { grid-template-columns: 1fr; flex-direction: column; align-items: stretch; } .instance-detail-actions { justify-content: flex-start; } }
+.snow-light .instance-detail-hero { background: linear-gradient(135deg, rgba(255,255,255,.94), rgba(239,246,250,.9)); }
+.snow-light .instance-detail-art { background: #eaf2f5; }
+.instance-detail-page .status-dot { background: currentColor; }

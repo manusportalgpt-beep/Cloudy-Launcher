@@ -13,6 +13,7 @@
   const navButtons = [...document.querySelectorAll(".rail-button[data-route]")];
   let bridge = null;
   let route = "home";
+  let selectedInstanceOverride = "";
   let onboardingStep = 1;
   let onboardingAuth = "";
   let onboardingNickname = "";
@@ -128,7 +129,7 @@
       storage: bridge?.storageData || {},
       language: uiLanguage(),
       globalMaxMemory: Number(bridge?.globalMaxMemory || 4096),
-      selectedInstanceId: bridge?.selectedInstanceId || "",
+      selectedInstanceId: selectedInstanceOverride || bridge?.selectedInstanceId || "",
       soundsEnabled: bridge?.soundsEnabled !== false,
       weatherTheme: readWeatherTheme(),
       snowVariant: readSnowVariant(),
@@ -287,6 +288,17 @@
       <div class="empty-note"><div><h2>${selected ? `Open files for ${escapeHtml(selected.name)}` : "Select an instance first"}</h2><p class="subtle">Drag & drop and editing continue in the native, permission-aware file workflow.</p><div style="margin-top:16px">${selected ? shellButton("Open instance folder", "open-files", "primary") : shellButton("Go to library", "home", "quiet")}</div></div></div></section>`;
   };
 
+  const renderInstance = ({ instances, selectedInstanceId }) => {
+    const selected = instances.find((item) => item.id === selectedInstanceId) || instances[0];
+    if (!selected) {
+      workspace.innerHTML = `<section class="page"><div class="page-heading"><div><p class="eyebrow">Instance workspace</p><h1>No instance selected</h1><p class="lead">Choose a build from Library to open its overview.</p></div>${shellButton("Back to library", "home", "primary")}</div><div class="empty-note"><h2>Your library is empty</h2><p class="subtle">Create or import a Minecraft instance first.</p></div></section>`;
+      return;
+    }
+    const status = selected.running ? "Playing" : "Ready to play";
+    const icon = selected.iconData ? `<img class="instance-detail-icon" src="${escapeHtml(selected.iconData)}" alt="${escapeHtml(selected.name)} icon">` : `<span class="instance-detail-placeholder">${escapeHtml((selected.name || "C").slice(0, 1).toUpperCase())}</span>`;
+    workspace.innerHTML = `<section class="page instance-detail-page"><div class="page-heading"><div><p class="eyebrow">Instance workspace</p><h1>${escapeHtml(selected.name)}</h1><p class="lead">A connected overview for this Minecraft build. Launching and resource changes remain handled by the native task pipeline.</p></div>${shellButton("Back to library", "home", "quiet")}</div><div class="instance-detail-hero"><div class="instance-detail-identity"><div class="instance-detail-art">${icon}</div><div><span class="status-chip"><span class="status-dot"></span>${status}</span><h2>${escapeHtml(selected.name)}</h2><p class="subtle">${escapeHtml(selected.managed ? `${selected.managedType || "Managed"} · ${selected.managedVersion || "version"}` : "Local Minecraft instance")}</p></div></div><div class="instance-detail-actions">${shellButton(selected.running ? "Open" : "Launch", "launch", "primary", selected.id)}${shellButton("Mods", "open-mods", "quiet", selected.id)}${shellButton("Files", "open-files", "quiet", selected.id)}</div></div><div class="detail-grid"><div class="feature-panel"><p class="eyebrow">Overview</p><h2>Build, inspect and play</h2><p class="subtle">Use the native instance page for version details, logs, screenshots, worlds and task progress.</p>${shellButton("Open native instance page", "open-native-instance", "quiet", selected.id)}</div><aside class="side-panel"><p class="eyebrow">Safe handoff</p><strong>Native workflow connected</strong><p class="subtle">Cloudy keeps account, file and installer permissions in the native layer.</p></aside></div></section>`;
+  };
+
   const renderAccounts = ({ account, hasAccount, accounts }) => {
     const accountCards = accounts.length ? accounts.map((item) => {
       const displayName = item.name || item.profileName || "Unnamed account";
@@ -344,6 +356,7 @@
     if (route === "new") renderNew(currentState);
     else if (route === "mods") renderMods(currentState);
     else if (route === "files") renderFiles(currentState);
+    else if (route === "instance") renderInstance(currentState);
     else if (route === "accounts") renderAccounts(currentState);
     else if (route === "settings") renderSettings(currentState);
     else if (route === "skins") renderSkins(currentState);
@@ -463,7 +476,9 @@
       if (action === "open-mods") { setRoute("mods"); callNative("openMods", id); }
       if (action === "files") setRoute("files");
       if (action === "open-files") { setRoute("files"); callNative("openFiles", id); }
-      if (action === "open-running" && id) { callNative("openInstancePage", id, "overview"); }
+      if (action === "open-running" && id) { selectedInstanceOverride = id; callNative("selectInstance", id); setRoute("instance"); }
+      if (action === "open-instance" && id) { selectedInstanceOverride = id; callNative("selectInstance", id); setRoute("instance"); }
+      if (action === "open-native-instance" && id) { callNative("openInstancePage", id, "overview"); }
       if (action === "toggle-sounds") { callNative("setSoundsEnabled", !state().soundsEnabled); }
       if (action === "window-minimize") { callNative("minimizeWindow"); }
       if (action === "window-toggle-maximize") { callNative("toggleMaximizeWindow"); }
@@ -476,8 +491,9 @@
 
     const card = event.target.closest("[data-instance-id]");
     if (card) {
+      selectedInstanceOverride = card.dataset.instanceId;
       callNative("selectInstance", card.dataset.instanceId);
-      setRoute("home");
+      setRoute("instance");
     }
   });
 
