@@ -43,13 +43,16 @@
 #include <QMap>
 #include <QSet>
 #include <QString>
+#include <QUrl>
 
 #include "Mod.h"
+#include "QObjectPtr.h"
 #include "ResourceFolderModel.h"
 #include "minecraft/mod/Resource.h"
 
 class BaseInstance;
 class QFileSystemWatcher;
+class NetJob;
 
 /**
  * A legacy mod list.
@@ -105,6 +108,13 @@ class ModFolderModel : public ResourceFolderModel {
     void onParseFinished();
 
    private:
+    void requestProviderIcon(const QString& resourceId, const QUrl& url) const;
+    QUrl providerIconUrl(const Mod& mod) const;
+
     QHash<QString, QSet<Mod*>> m_requiredBy;
     QHash<QString, QSet<Mod*>> m_requires;
+
+    mutable shared_qobject_ptr<NetJob> m_providerIconJob;
+    mutable QSet<QUrl> m_loadingProviderIcons;
+    mutable QSet<QUrl> m_failedProviderIcons;
 };

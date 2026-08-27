@@ -70,6 +70,7 @@ class CloudyWebBridge : public QObject {
     void openSettings();
     void openSkinStudio();
     void openMods(const QString& instanceId);
+    void openModInstaller(const QString& instanceId, const QString& resourceType = QStringLiteral("mods"));
     void openFiles(const QString& instanceId);
     void openInstancePage(const QString& instanceId, const QString& page = QStringLiteral("overview"));
     void selectInstance(const QString& instanceId);

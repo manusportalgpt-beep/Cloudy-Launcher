@@ -133,12 +133,20 @@ static LoadResult loadComponent(ComponentPtr component, Task::Ptr& loadTask, Net
         } else {
             loadTask = APPLICATION->metadataIndex()->loadVersion(component->m_uid, component->m_version, netmode);
             loadTask->start();
-            if (netmode == Net::Mode::Online)
+            if (loadTask->isFinished()) {
+                // Local/offline metadata can complete synchronously inside
+                // BaseEntityLoadTask::start(). Inspect the result before wiring
+                // callbacks, otherwise the signal is missed and launch fails.
+                if (loadTask->wasSuccessful() && metaVersion->status() != Meta::BaseEntity::LoadStatus::NotLoaded) {
+                    component->m_loaded = true;
+                    result = LoadResult::LoadedLocal;
+                } else {
+                    result = LoadResult::Failed;
+                }
+                loadTask.reset();
+            } else {
                 result = LoadResult::RequiresRemote;
-            else if (metaVersion->isLoaded())
-                result = LoadResult::LoadedLocal;
-            else
-                result = LoadResult::Failed;
+            }
         }
     }
     return result;

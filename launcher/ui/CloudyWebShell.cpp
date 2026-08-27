@@ -12,8 +12,17 @@
 #include "MainWindow.h"
 #include "Application.h"
 #include "settings/SettingsObject.h"
+#include "tasks/Task.h"
 
 #include <QApplication>
+#include <QFrame>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QProgressBar>
+#include <QPushButton>
+#include <QStyle>
+#include <QToolButton>
+#include <QVBoxLayout>
 #include <QBuffer>
 #include <QColor>
 #include <QFile>
@@ -163,9 +172,11 @@ QString cloudyNativeStyleSheet()
     const auto line = QStringLiteral("#3b5575");
     const auto highlight = QStringLiteral("#1b304d");
     return QStringLiteral(
-               "QWidget#cloudyNativePage { background: %1; color: %2; }"
-               "QWidget#cloudyNativePage QScrollArea, QWidget#cloudyNativePage QScrollArea > QWidget > QWidget, QWidget#cloudyNativePage QStackedWidget { background: %1; border: 0; }"
+               "QWidget#cloudyNativePage, QWidget#cloudyNativePage QDialog { background: %1; color: %2; }"
+               "QWidget#cloudyNativePage QFrame, QWidget#cloudyNativePage QScrollArea, QWidget#cloudyNativePage QScrollArea > QWidget > QWidget, QWidget#cloudyNativePage QStackedWidget { background: %1; color: %2; border: 0; }"
+               "QWidget#cloudyNativePage QAbstractScrollArea, QWidget#cloudyNativePage QAbstractScrollArea > QWidget, QWidget#cloudyNativePage QAbstractScrollArea QWidget#qt_scrollarea_viewport { background: %5; color: %2; border: 0; }"
                "QWidget#cloudyNativePage QGroupBox { color: %2; background: %1; border: 1px solid %3; border-radius: 8px; margin-top: 10px; padding-top: 10px; }"
+               "QWidget#cloudyNativePage QGroupBox::title { color: %2; subcontrol-origin: margin; left: 10px; padding: 0 4px; background: %1; }"
                "QWidget#cloudyNativePage QLabel { color: %2; }"
                "QWidget#cloudyNativePage #cloudySettingsHeader { background: %1; border-bottom: 1px solid %3; }"
                "QWidget#cloudyNativePage #cloudyPageTitle { font-size: 16px; font-weight: 650; padding: 2px 0; }"
@@ -176,17 +187,30 @@ QString cloudyNativeStyleSheet()
                "QWidget#cloudyNativePage #cloudyPageNav::item:selected { color: %2; background: %5; border: 1px solid %3; }"
                "QWidget#cloudyNativePage QLineEdit, QWidget#cloudyNativePage QPlainTextEdit, QWidget#cloudyNativePage QTextEdit, QWidget#cloudyNativePage QComboBox, QWidget#cloudyNativePage QSpinBox, QWidget#cloudyNativePage QDoubleSpinBox { color: %2; background: %5; border: 1px solid %3; border-radius: 7px; padding: 6px 8px; selection-background-color: %6; }"
                "QWidget#cloudyNativePage QListView, QWidget#cloudyNativePage QTreeView, QWidget#cloudyNativePage QTableView { color: %2; background: %5; alternate-background-color: %1; border: 1px solid %3; border-radius: 8px; selection-background-color: %6; selection-color: %7; }"
-               "QWidget#cloudyNativePage QHeaderView::section { color: %4; background: %1; border: 0; border-bottom: 1px solid %3; padding: 6px 8px; }"
+               "QWidget#cloudyNativePage QListView::item, QWidget#cloudyNativePage QTreeView::item, QWidget#cloudyNativePage QTableView::item { color: %2; background: transparent; padding: 3px; }"
+               "QWidget#cloudyNativePage QListView::item:hover, QWidget#cloudyNativePage QTreeView::item:hover, QWidget#cloudyNativePage QTableView::item:hover { background: %5; }"
+               "QWidget#cloudyNativePage QHeaderView, QWidget#cloudyNativePage QHeaderView::section { color: %4; background: %1; border: 0; border-bottom: 1px solid %3; padding: 6px 8px; }"
                "QWidget#cloudyNativePage QTabBar::tab { color: %4; background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 8px 10px; margin-right: 3px; }"
                "QWidget#cloudyNativePage QTabBar::tab:hover, QWidget#cloudyNativePage QTabBar::tab:selected { color: %2; background: %5; border-color: %3; }"
-               "QWidget#cloudyNativePage QPushButton { color: %2; background: transparent; border: 1px solid %3; border-radius: 8px; padding: 7px 13px; }"
-               "QWidget#cloudyNativePage QPushButton:hover { background: %5; border-color: %2; }"
+               "QWidget#cloudyNativePage QPushButton, QWidget#cloudyNativePage QToolButton { color: %2; background: %5; border: 1px solid %3; border-radius: 8px; padding: 7px 13px; }"
+               "QWidget#cloudyNativePage QPushButton:hover, QWidget#cloudyNativePage QToolButton:hover { background: %6; border-color: %2; }"
+               "QWidget#cloudyNativePage QPushButton:pressed, QWidget#cloudyNativePage QToolButton:pressed { background: %1; border-color: %2; }"
+               "QWidget#cloudyNativePage QPushButton:disabled, QWidget#cloudyNativePage QToolButton:disabled { color: %4; background: %1; border-color: %3; }"
+               "QWidget#cloudyNativePage QDialogButtonBox { background: %1; border: 0; }"
                "QWidget#cloudyNativePage QDialogButtonBox QPushButton { min-width: 72px; }"
                "QWidget#cloudyNativePage QDialogButtonBox QPushButton[text=\\\"OK\\\"] { color: %8; background: %6; border-color: %6; font-weight: 650; }"
+               "QWidget#cloudyNativePage QComboBox QAbstractItemView { color: %2; background: %5; border: 1px solid %3; selection-background-color: %6; selection-color: %7; }"
+               "QWidget#cloudyNativePage QComboBox::drop-down { background: %5; border-left: 1px solid %3; width: 22px; }"
+               "QWidget#cloudyNativePage QTextBrowser, QWidget#cloudyNativePage QPlainTextEdit { color: %2; background: %5; border: 1px solid %3; border-radius: 8px; selection-background-color: %6; }"
                "QWidget#cloudyNativePage QCheckBox::indicator, QWidget#cloudyNativePage QRadioButton::indicator { width: 15px; height: 15px; border: 1px solid %3; border-radius: 4px; background: %5; }"
                "QWidget#cloudyNativePage QCheckBox::indicator:checked, QWidget#cloudyNativePage QRadioButton::indicator:checked { background: %6; border-color: %6; }"
+               "QWidget#cloudyNativePage QLineEdit:focus, QWidget#cloudyNativePage QPlainTextEdit:focus, QWidget#cloudyNativePage QTextEdit:focus, QWidget#cloudyNativePage QComboBox:focus, QWidget#cloudyNativePage QSpinBox:focus, QWidget#cloudyNativePage QDoubleSpinBox:focus { border-color: %2; }"
                "QWidget#cloudyNativePage QScrollBar:vertical { background: transparent; width: 8px; margin: 2px; }"
                "QWidget#cloudyNativePage QScrollBar::handle:vertical { background: %3; border-radius: 4px; min-height: 24px; }"
+               "QWidget#cloudyNativePage QScrollBar::handle:horizontal { background: %3; border-radius: 4px; min-width: 24px; }"
+               "QWidget#cloudyNativePage QMenu, QWidget#cloudyNativePage QToolBar { color: %2; background: %1; border: 1px solid %3; }"
+               "QWidget#cloudyNativePage QMenu::item { color: %2; background: transparent; padding: 6px 18px; }"
+               "QWidget#cloudyNativePage QMenu::item:selected { color: %2; background: %6; }"
            )
         .arg(window)
         .arg(text)
@@ -223,6 +247,70 @@ CloudyWebShell::CloudyWebShell(MainWindow* window, QWidget* parent) : QWidget(pa
     m_webView->page()->profile()->installUrlSchemeHandler(QByteArrayLiteral("cloudy"),
                                                           new CloudyResourceHandler(initialDocument, m_webView->page()->profile()));
     m_webView->setGeometry(rect());
+
+    m_taskDock = new QFrame(this);
+    m_taskDock->setObjectName(QStringLiteral("cloudyTaskDock"));
+    m_taskDock->setFrameShape(QFrame::StyledPanel);
+    m_taskDock->setStyleSheet(QStringLiteral(
+        "QFrame#cloudyTaskDock { background:#101d30; color:#f3f7ff; border:1px solid #3b5575; border-radius:12px; }"
+        "QToolButton#cloudyTaskToggle, QToolButton#cloudyTaskAbort { color:#f3f7ff; background:transparent; border:0; border-radius:7px; padding:4px 6px; }"
+        "QToolButton#cloudyTaskToggle:hover, QToolButton#cloudyTaskAbort:hover { background:#1b304d; }"
+        "QLabel#cloudyTaskTitle { color:#f3f7ff; font-weight:650; }"
+        "QLabel#cloudyTaskStatus { color:#b0c1d8; }"
+        "QLabel#cloudyTaskPercent { color:#f3f7ff; font-weight:650; min-width:38px; }"
+        "QProgressBar#cloudyTaskProgress { background:#0f1a2b; border:1px solid #3b5575; border-radius:4px; height:7px; text-visible:false; }"
+        "QProgressBar#cloudyTaskProgress::chunk { background:#78b1e5; border-radius:3px; }"));
+    auto* taskLayout = new QVBoxLayout(m_taskDock);
+    taskLayout->setContentsMargins(8, 7, 8, 8);
+    taskLayout->setSpacing(5);
+    auto* taskHeader = new QHBoxLayout();
+    taskHeader->setContentsMargins(0, 0, 0, 0);
+    taskHeader->setSpacing(6);
+    m_taskToggle = new QToolButton(m_taskDock);
+    m_taskToggle->setObjectName(QStringLiteral("cloudyTaskToggle"));
+    m_taskToggle->setText(QStringLiteral("+"));
+    m_taskToggle->setToolTip(tr("Expand task progress"));
+    m_taskToggle->setFixedWidth(24);
+    taskHeader->addWidget(m_taskToggle);
+    m_taskIcon = new QLabel(m_taskDock);
+    m_taskIcon->setFixedSize(22, 22);
+    taskHeader->addWidget(m_taskIcon);
+    m_taskTitle = new QLabel(m_taskDock);
+    m_taskTitle->setObjectName(QStringLiteral("cloudyTaskTitle"));
+    m_taskTitle->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    taskHeader->addWidget(m_taskTitle);
+    m_taskPercent = new QLabel(m_taskDock);
+    m_taskPercent->setObjectName(QStringLiteral("cloudyTaskPercent"));
+    m_taskPercent->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    taskHeader->addWidget(m_taskPercent);
+    m_taskAbort = new QToolButton(m_taskDock);
+    m_taskAbort->setObjectName(QStringLiteral("cloudyTaskAbort"));
+    m_taskAbort->setText(QStringLiteral("×"));
+    m_taskAbort->setToolTip(tr("Abort task"));
+    m_taskAbort->setFixedWidth(24);
+    taskHeader->addWidget(m_taskAbort);
+    taskLayout->addLayout(taskHeader);
+
+    m_taskDetails = new QWidget(m_taskDock);
+    auto* detailsLayout = new QVBoxLayout(m_taskDetails);
+    detailsLayout->setContentsMargins(30, 0, 0, 0);
+    detailsLayout->setSpacing(4);
+    m_taskStatus = new QLabel(m_taskDetails);
+    m_taskStatus->setObjectName(QStringLiteral("cloudyTaskStatus"));
+    m_taskStatus->setWordWrap(true);
+    detailsLayout->addWidget(m_taskStatus);
+    m_taskProgress = new QProgressBar(m_taskDetails);
+    m_taskProgress->setObjectName(QStringLiteral("cloudyTaskProgress"));
+    m_taskProgress->setTextVisible(false);
+    detailsLayout->addWidget(m_taskProgress);
+    m_taskDetails->hide();
+    taskLayout->addWidget(m_taskDetails);
+    m_taskDock->hide();
+    connect(m_taskToggle, &QToolButton::clicked, this, &CloudyWebShell::toggleTaskDock);
+    connect(m_taskAbort, &QToolButton::clicked, this, [this] {
+        if (m_watchedTask)
+            m_watchedTask->abort();
+    });
 
     m_channel = new QWebChannel(m_webView);
     m_bridge = new CloudyWebBridge(window, m_channel);
@@ -265,6 +353,8 @@ void CloudyWebShell::showNativePage(QWidget* page)
     m_nativePage = page;
     m_nativePage->setParent(this);
     m_nativePage->setObjectName(QStringLiteral("cloudyNativePage"));
+    m_nativePage->setAttribute(Qt::WA_StyledBackground, true);
+    m_nativePage->setAutoFillBackground(true);
     m_nativePage->setWindowFlags(Qt::Widget);
     m_nativePage->setAttribute(Qt::WA_DeleteOnClose, false);
     const auto nativeStyle = cloudyNativeStyleSheet();
@@ -287,6 +377,147 @@ void CloudyWebShell::showNativePage(QWidget* page)
     m_nativePage->setGeometry(nativeContentRect());
     m_nativePage->raise();
     m_nativePage->show();
+    if (m_taskDock) {
+        m_taskDock->raise();
+        updateTaskDockGeometry();
+    }
+}
+
+void CloudyWebShell::watchTask(Task* task, const QString& title, const QString& iconName)
+{
+    if (!task)
+        return;
+
+    for (const auto& connection : m_taskConnections)
+        disconnect(connection);
+    m_taskConnections.clear();
+
+    m_watchedTask = task;
+    m_taskOutcomeKnown = false;
+    m_taskSuccessful = false;
+    m_taskFailure.clear();
+    m_taskBaseTitle = title;
+    m_taskTitle->setText(m_taskQueueCount > 0 ? tr("%1 · %2 queued").arg(title).arg(m_taskQueueCount) : title);
+    m_taskStatus->setText(task->getStatus());
+    m_taskPercent->setText(QStringLiteral("0%"));
+    m_taskProgress->setRange(0, 100);
+    m_taskProgress->setValue(0);
+    m_taskAbort->setVisible(task->canAbort());
+    m_taskIcon->setPixmap(QIcon::fromTheme(iconName.isEmpty() ? QStringLiteral("download") : iconName)
+                              .pixmap(20, 20));
+    if (m_taskIcon->pixmap(Qt::ReturnByValue).isNull())
+        m_taskIcon->setPixmap(style()->standardIcon(QStyle::SP_ArrowDown).pixmap(20, 20));
+
+    m_taskConnections.push_back(connect(task, &Task::progress, this, &CloudyWebShell::updateTaskProgress));
+    m_taskConnections.push_back(connect(task, &Task::status, this, [this](const QString& status) {
+        if (m_taskStatus)
+            m_taskStatus->setText(status);
+    }));
+    m_taskConnections.push_back(connect(task, &Task::details, this, [this](const QString& details) {
+        if (m_taskStatus && !details.isEmpty())
+            m_taskStatus->setText(details);
+    }));
+    m_taskConnections.push_back(connect(task, &Task::abortStatusChanged, m_taskAbort, &QWidget::setVisible));
+    m_taskConnections.push_back(connect(task, &Task::succeeded, this, [this] {
+        m_taskOutcomeKnown = true;
+        m_taskSuccessful = true;
+        m_taskFailure.clear();
+    }));
+    m_taskConnections.push_back(connect(task, &Task::failed, this, [this](const QString& reason) {
+        m_taskOutcomeKnown = true;
+        m_taskSuccessful = false;
+        m_taskFailure = reason;
+    }));
+    const QPointer<Task> watchedTask = task;
+    m_taskConnections.push_back(connect(task, &Task::finished, this, [this, watchedTask] {
+        if (!m_taskOutcomeKnown && watchedTask) {
+            m_taskOutcomeKnown = true;
+            m_taskSuccessful = watchedTask->wasSuccessful();
+            m_taskFailure = m_taskSuccessful ? QString() : watchedTask->failReason();
+        }
+        finishTask(m_taskSuccessful, m_taskSuccessful ? tr("Completed") : m_taskFailure);
+    }));
+
+    m_taskDock->show();
+    m_taskDock->raise();
+    updateTaskDockGeometry();
+    if (task->isFinished()) {
+        m_taskOutcomeKnown = true;
+        m_taskSuccessful = task->wasSuccessful();
+        m_taskFailure = m_taskSuccessful ? QString() : task->failReason();
+        finishTask(m_taskSuccessful, m_taskSuccessful ? tr("Completed") : m_taskFailure);
+    }
+}
+
+void CloudyWebShell::setTaskQueueCount(int count)
+{
+    m_taskQueueCount = qMax(0, count);
+    if (m_taskTitle && !m_taskBaseTitle.isEmpty())
+        m_taskTitle->setText(m_taskQueueCount > 0 ? tr("%1 · %2 queued").arg(m_taskBaseTitle).arg(m_taskQueueCount) : m_taskBaseTitle);
+    updateTaskDockGeometry();
+}
+
+void CloudyWebShell::updateTaskProgress(qint64 current, qint64 total)
+{
+    if (!m_taskProgress || !m_taskPercent)
+        return;
+    if (total <= 0) {
+        m_taskProgress->setRange(0, 0);
+        m_taskPercent->setText(QStringLiteral("…"));
+        return;
+    }
+    const auto bounded = qBound<qint64>(0, current, total);
+    const int percent = static_cast<int>((bounded * 100) / total);
+    m_taskProgress->setRange(0, 100);
+    m_taskProgress->setValue(percent);
+    m_taskPercent->setText(QStringLiteral("%1%").arg(percent));
+}
+
+void CloudyWebShell::finishTask(bool successful, const QString& message)
+{
+    if (!m_taskDock)
+        return;
+    m_taskProgress->setRange(0, 100);
+    m_taskProgress->setValue(successful ? 100 : 0);
+    m_taskPercent->setText(successful ? QStringLiteral("100%") : QStringLiteral("!"));
+    m_taskStatus->setText(message.isEmpty() ? (successful ? tr("Completed") : tr("Task failed")) : message);
+    m_taskAbort->hide();
+    const QPointer<Task> completedTask = m_watchedTask;
+    QTimer::singleShot(1800, this, [this, completedTask] {
+        if (m_watchedTask != completedTask)
+            return;
+        if (!m_watchedTask || !m_watchedTask->isRunning()) {
+            m_taskDock->hide();
+            m_watchedTask = nullptr;
+            m_taskDetails->hide();
+            m_taskToggle->setText(QStringLiteral("+"));
+            m_taskExpanded = false;
+            m_taskOutcomeKnown = false;
+            m_taskFailure.clear();
+        }
+    });
+}
+
+void CloudyWebShell::toggleTaskDock()
+{
+    m_taskExpanded = !m_taskExpanded;
+    m_taskDetails->setVisible(m_taskExpanded);
+    m_taskToggle->setText(m_taskExpanded ? QStringLiteral("−") : QStringLiteral("+"));
+    m_taskToggle->setToolTip(m_taskExpanded ? tr("Collapse task progress") : tr("Expand task progress"));
+    updateTaskDockGeometry();
+}
+
+void CloudyWebShell::updateTaskDockGeometry()
+{
+    if (!m_taskDock || !m_taskDock->isVisible())
+        return;
+    const int maxWidth = qMin(390, qMax(220, width() - 92));
+    m_taskDock->setFixedWidth(maxWidth);
+    m_taskDock->adjustSize();
+    const int x = 74;
+    const int y = qMax(56, height() - m_taskDock->height() - 14);
+    m_taskDock->move(x, y);
+    m_taskDock->raise();
 }
 
 void CloudyWebShell::restoreWebPage()
@@ -297,6 +528,8 @@ void CloudyWebShell::restoreWebPage()
         m_nativePage = nullptr;
     }
     m_webView->raise();
+    if (m_taskDock)
+        m_taskDock->raise();
     m_webView->setFocus();
     if (m_bridge)
         m_bridge->stateChanged();
@@ -309,6 +542,8 @@ void CloudyWebShell::prepareForShutdown()
 
     if (m_nativePage)
         m_nativePage->hide();
+    if (m_taskDock)
+        m_taskDock->hide();
 
     m_webView->hide();
     m_webView->stop();
@@ -323,6 +558,7 @@ void CloudyWebShell::resizeEvent(QResizeEvent* event)
     if (m_webView)
         m_webView->setGeometry(rect());
     updateNativePageGeometry();
+    updateTaskDockGeometry();
 }
 
 void CloudyWebShell::updateNativePageGeometry()

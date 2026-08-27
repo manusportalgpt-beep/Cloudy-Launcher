@@ -253,12 +253,16 @@ void CloudyWebBridge::openMods(const QString& instanceId)
     m_window->webOpenInstancePage(instanceId, QStringLiteral("mods"));
 }
 
+void CloudyWebBridge::openModInstaller(const QString& instanceId, const QString& resourceType)
+{
+    if (m_window)
+        m_window->webOpenResourceInstaller(instanceId, resourceType);
+}
+
 void CloudyWebBridge::openFiles(const QString& instanceId)
 {
-    if (!m_window)
-        return;
-    m_window->webSelectInstance(instanceId);
-    QMetaObject::invokeMethod(m_window, "on_actionViewSelectedInstFolder_triggered", Qt::QueuedConnection);
+    if (m_window)
+        m_window->webOpenFiles(instanceId);
 }
 
 void CloudyWebBridge::openInstancePage(const QString& instanceId, const QString& page)

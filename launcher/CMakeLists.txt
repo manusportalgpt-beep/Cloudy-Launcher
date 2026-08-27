@@ -828,6 +828,8 @@ SET(LAUNCHER_SOURCES
     ui/CloudyWebBridge.cpp
     ui/CloudyWebShell.h
     ui/CloudyWebShell.cpp
+    ui/CloudyFilesPage.h
+    ui/CloudyFilesPage.cpp
     ui/InstanceWindow.h
     ui/InstanceWindow.cpp
     ui/ViewLogWindow.h
@@ -1340,6 +1342,14 @@ if(${Launcher_USE_PCH})
 endif()
 
 target_link_libraries(${Launcher_Name} Launcher_logic)
+
+# Keep source-tree debug launches self-contained: the executable looks up
+# these helper jars from the build tree, so build them with the launcher.
+foreach(java_target IN ITEMS JavaCheck NewLaunch NewLaunchLegacy)
+    if(TARGET ${java_target})
+        add_dependencies(${Launcher_Name} ${java_target})
+    endif()
+endforeach()
 
 if(DEFINED Launcher_APP_BINARY_NAME)
     set_target_properties(${Launcher_Name} PROPERTIES OUTPUT_NAME "${Launcher_APP_BINARY_NAME}")

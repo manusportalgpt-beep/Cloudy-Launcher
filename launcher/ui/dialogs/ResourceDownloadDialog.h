@@ -36,6 +36,8 @@ class QVBoxLayout;
 class QDialogButtonBox;
 class ResourceDownloadTask;
 class ResourceFolderModel;
+class QLabel;
+class Task;
 class ResourcePackFolderModel;
 class TexturePackFolderModel;
 class ShaderPackFolderModel;
@@ -53,23 +55,28 @@ class ResourceDownloadDialog : public QDialog, public BasePageProvider {
     static ResourceDownloadDialog* createMod(QWidget* parent,
                                              ResourceFolderModel* mods,
                                              MinecraftInstance* instance,
-                                             bool suppressInitialSearch = false);
+                                             bool suppressInitialSearch = false,
+                                             bool embedded = false);
     static ResourceDownloadDialog* createResourcePack(QWidget* parent,
                                                       ResourceFolderModel* mods,
                                                       MinecraftInstance* instance,
-                                                      bool suppressInitialSearch = false);
+                                                      bool suppressInitialSearch = false,
+                                                      bool embedded = false);
     static ResourceDownloadDialog* createTexturePack(QWidget* parent,
                                                      ResourceFolderModel* mods,
                                                      MinecraftInstance* instance,
-                                                     bool suppressInitialSearch = false);
+                                                     bool suppressInitialSearch = false,
+                                                     bool embedded = false);
     static ResourceDownloadDialog* createShaderPack(QWidget* parent,
                                                     ResourceFolderModel* mods,
                                                     MinecraftInstance* instance,
-                                                    bool suppressInitialSearch = false);
+                                                    bool suppressInitialSearch = false,
+                                                    bool embedded = false);
     static ResourceDownloadDialog* createDataPack(QWidget* parent,
                                                   ResourceFolderModel* mods,
                                                   MinecraftInstance* instance,
-                                                  bool suppressInitialSearch = false);
+                                                  bool suppressInitialSearch = false,
+                                                  bool embedded = false);
 
     void initializeContainer();
     void connectButtons();
@@ -96,6 +103,9 @@ class ResourceDownloadDialog : public QDialog, public BasePageProvider {
     void accept() override;
     void reject() override;
 
+   signals:
+    void embeddedTaskRequested(Task* task, QString title);
+
    protected slots:
     void selectedPageChanged(BasePage* previous, BasePage* selected);
 
@@ -107,10 +117,13 @@ class ResourceDownloadDialog : public QDialog, public BasePageProvider {
                            MinecraftInstance* instance,
                            QString resourcesString = tr("resources"),
                            QString geometrySaveKey = "",
-                           bool suppressInitialSearch = false);
+                           bool suppressInitialSearch = false,
+                           bool embedded = false);
 
     QString geometrySaveKey() const { return m_geometrySaveKey; }
     void setButtonStatus();
+    void finishEmbeddedDependencyCheck();
+    void failEmbeddedDependencyCheck(const QString& reason);
 
     GetModDependenciesTask::Ptr getModDependenciesTask();
 
@@ -126,6 +139,9 @@ class ResourceDownloadDialog : public QDialog, public BasePageProvider {
 
    protected:
     bool m_suppressInitialSearch = false;
+    bool m_embedded = false;
+    QLabel* m_embeddedStatus = nullptr;
+    GetModDependenciesTask::Ptr m_dependencyTask;
     MinecraftInstance* m_instance;
 
     QString m_resourcesString;

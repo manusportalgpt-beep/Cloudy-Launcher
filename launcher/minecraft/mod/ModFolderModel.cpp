@@ -39,12 +39,15 @@
 
 #include <FileSystem.h>
 #include <QAbstractButton>
+#include <QApplication>
+#include <QCryptographicHash>
 #include <QDebug>
 #include <QFileInfo>
 #include <QFileSystemWatcher>
 #include <QHeaderView>
 #include <QIcon>
 #include <QMimeData>
+#include <QPixmapCache>
 #include <QString>
 #include <QStyle>
 #include <QThreadPool>
@@ -53,10 +56,13 @@
 #include <algorithm>
 #include <set>
 
+#include "Application.h"
 #include "minecraft/mod/Resource.h"
 #include "minecraft/mod/ResourceFolderModel.h"
 #include "minecraft/mod/tasks/LocalModParseTask.h"
 #include "modplatform/ModIndex.h"
+#include "net/ApiRequest.h"
+#include "net/NetJob.h"
 #include "ui/dialogs/CustomMessageBox.h"
 
 ModFolderModel::ModFolderModel(const QDir& dir, MinecraftInstance* instance, bool isIndexed, bool createDir, QObject* parent)
@@ -127,7 +133,21 @@ QVariant ModFolderModel::data(const QModelIndex& index, int role) const
             break;
         case Qt::DecorationRole: {
             if (column == ImageColumn) {
-                return at(row).icon({ 32, 32 }, Qt::AspectRatioMode::KeepAspectRatioByExpanding);
+                const auto icon = at(row).icon({ 32, 32 }, Qt::AspectRatioMode::KeepAspectRatioByExpanding);
+                if (!icon.isNull())
+                    return icon;
+
+                const auto projectIconUrl = providerIconUrl(at(row));
+                if (projectIconUrl.isValid()) {
+                    QPixmap projectIcon;
+                    if (QPixmapCache::find(projectIconUrl.toString(), &projectIcon) && !projectIcon.isNull())
+                        return projectIcon;
+                    requestProviderIcon(at(row).internalId(), projectIconUrl);
+                }
+
+                const auto fallback = QIcon::fromTheme(QStringLiteral("application-x-java"),
+                                                        QApplication::style()->standardIcon(QStyle::SP_FileIcon));
+                return fallback.pixmap({ 32, 32 });
             }
             break;
         }
@@ -245,6 +265,64 @@ Task* ModFolderModel::createParseTask(Resource& resource)
 bool ModFolderModel::isValid()
 {
     return m_dir.exists() && m_dir.isReadable();
+}
+
+QUrl ModFolderModel::providerIconUrl(const Mod& mod) const
+{
+    const auto metadata = mod.metadata();
+    if (!metadata || metadata->provider != ModPlatform::ResourceProvider::MODRINTH)
+        return {};
+
+    const auto projectId = metadata->project_id.toString().trimmed();
+    if (projectId.isEmpty())
+        return {};
+
+    return QUrl(QStringLiteral("https://cdn.modrinth.com/data/%1/icon.png").arg(projectId));
+}
+
+void ModFolderModel::requestProviderIcon(const QString& resourceId, const QUrl& url) const
+{
+    if (!url.isValid() || url.isEmpty() || m_loadingProviderIcons.contains(url) || m_failedProviderIcons.contains(url))
+        return;
+
+    if (!m_providerIconJob) {
+        m_providerIconJob.reset(new NetJob(tr("Installed mod icons"), APPLICATION->network()));
+        m_providerIconJob->setAskRetry(false);
+    }
+
+    const auto cacheEntry = APPLICATION->metacache()->resolveEntry(
+        QStringLiteral("CloudyInstalledModIcons"),
+        QStringLiteral("logos/%1").arg(QString(QCryptographicHash::hash(url.toEncoded(), QCryptographicHash::Sha1).toHex())));
+    const auto iconFetchAction = Net::ApiRequest::makeCached(url, cacheEntry);
+    const auto fullFilePath = cacheEntry->getFullPath();
+    connect(iconFetchAction.get(), &Task::succeeded, this, [this, resourceId, url, fullFilePath] {
+        const QIcon icon(fullFilePath);
+        const auto iconSize = icon.actualSize({ 64, 64 });
+        const auto iconPixmap = iconSize.isValid() ? icon.pixmap(iconSize) : QPixmap();
+        if (!iconPixmap.isNull())
+            QPixmapCache::insert(url.toString(), iconPixmap);
+
+        m_loadingProviderIcons.remove(url);
+        const auto row = m_resourcesIndex.value(resourceId, -1);
+        if (row >= 0) {
+            auto* model = const_cast<ModFolderModel*>(this);
+            emit model->dataChanged(model->index(row, ImageColumn), model->index(row, ImageColumn), { Qt::DecorationRole });
+        }
+    });
+    connect(iconFetchAction.get(), &Task::failed, this, [this, resourceId, url] {
+        m_loadingProviderIcons.remove(url);
+        m_failedProviderIcons.insert(url);
+        const auto row = m_resourcesIndex.value(resourceId, -1);
+        if (row >= 0) {
+            auto* model = const_cast<ModFolderModel*>(this);
+            emit model->dataChanged(model->index(row, ImageColumn), model->index(row, ImageColumn), { Qt::DecorationRole });
+        }
+    });
+
+    m_loadingProviderIcons.insert(url);
+    m_providerIconJob->addNetAction(iconFetchAction);
+    if (!m_providerIconJob->isRunning())
+        QMetaObject::invokeMethod(m_providerIconJob.get(), &NetJob::start);
 }
 
 void ModFolderModel::onParseSucceeded(int ticket, const QString& resourceId)

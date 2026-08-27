@@ -4,7 +4,9 @@ find_package(Java 1.7 REQUIRED COMPONENTS Development)
 
 include(UseJava)
 set(CMAKE_JAVA_JAR_ENTRY_POINT org.prismlauncher.EntryPoint)
-set(CMAKE_JAVA_COMPILE_FLAGS -target 7 -source 7)
+# Java 7 was removed from modern JDK toolchains. The launcher sources use
+# Java 8-compatible language features and remain runnable on current JREs.
+set(CMAKE_JAVA_COMPILE_FLAGS -target 8 -source 8)
 
 set(SRC
     org/prismlauncher/EntryPoint.java

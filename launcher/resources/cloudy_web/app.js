@@ -166,7 +166,10 @@
     render();
   };
 
-  const shellButton = (label, action, extra = "") => `<button class="action-button ${extra}" data-action="${action}">${label}</button>`;
+  const shellButton = (label, action, extra = "", instanceId = "") => {
+    const instanceAttribute = instanceId ? ` data-instance-id="${escapeHtml(instanceId)}"` : "";
+    return `<button class="action-button ${extra}" data-action="${action}"${instanceAttribute}>${label}</button>`;
+  };
   const providerIconSources = {
     custom: "data:image/svg+xml;base64,CLOUDY_PROVIDER_CUSTOM",
     modrinth: "data:image/png;base64,CLOUDY_PROVIDER_MODRINTH",
@@ -215,9 +218,9 @@
           <small>${escapeHtml(instanceLabel(item))}</small>
           <span class="instance-status"><span class="status-dot"></span>${item.running ? "Playing" : "Available"}</span>
           <div class="card-actions">
-            ${item.running ? shellButton("Open", "launch", "quiet") : shellButton("Launch", "launch", "primary")}
-            <button class="action-button quiet" data-route="mods">Mods</button>
-            <button class="action-button quiet" data-route="files">Files</button>
+            ${item.running ? shellButton("Open", "launch", "quiet", item.id) : shellButton("Launch", "launch", "primary", item.id)}
+            <button class="action-button quiet" data-action="open-mods" data-instance-id="${escapeHtml(item.id)}">Mods</button>
+            <button class="action-button quiet" data-action="open-files" data-instance-id="${escapeHtml(item.id)}">Files</button>
           </div>
         </div>
       </article>`).join("");
@@ -278,15 +281,15 @@
     const selected = instances.find((item) => item.id === selectedInstanceId) || instances[0];
     workspace.innerHTML = `
       <section class="page"><div class="page-heading"><div><p class="eyebrow">Resource workspace</p><h1>Mods & resources</h1><p class="lead">Search and install mods through the existing Modrinth, CurseForge and local resource workflows.</p></div>${shellButton("Back to library", "home", "quiet")}</div>
-      <div class="hero-strip"><div class="hero-panel"><p class="eyebrow">Selected instance</p><h2>${selected ? escapeHtml(selected.name) : "No instance selected"}</h2><p class="lead">Select an instance from Library, then open its real mod page with filters, versions and install tasks.</p>${selected ? shellButton("Open native mod workspace", "open-mods", "primary") : shellButton("Choose an instance", "home", "quiet")}</div><div class="side-panel"><span>Sources</span><strong>3+</strong><span>Modrinth · CurseForge · local files</span></div></div>
-      <div class="flow-layout"><div class="feature-panel"><div class="tools-row"><h2>Install source</h2><span class="subtle">Task-backed</span></div><div class="provider-list"><button class="provider-card" data-action="open-mods"><span class="provider-logo provider-modrinth"><img src="data:image/png;base64,CLOUDY_PROVIDER_MODRINTH" alt=""></span><span><strong>Modrinth</strong><small>Search projects and versions</small></span></button><button class="provider-card" data-action="open-mods"><span class="provider-logo provider-curseforge"><img src="data:image/png;base64,CLOUDY_PROVIDER_CURSEFORGE" alt=""></span><span><strong>CurseForge</strong><small>Use existing package metadata</small></span></button></div></div><aside class="side-panel"><p class="eyebrow">Provider details</p><h2>Authors stay linked</h2><p class="subtle">Open the native resource workspace for real project metadata, clickable Modrinth and CurseForge author links, versions and install tasks.</p><div class="callout">Author pages, project links and provider extras are loaded from the existing native models. Cloudy does not invent author profiles or expose provider credentials.</div></aside></div></section>`;
+      <div class="hero-strip"><div class="hero-panel"><p class="eyebrow">Selected instance</p><h2>${selected ? escapeHtml(selected.name) : "No instance selected"}</h2><p class="lead">Select an instance from Library, then open its real mod page with filters, versions and install tasks.</p>${selected ? shellButton("Open mod installer", "open-mod-installer", "primary", selected.id) : shellButton("Choose an instance", "home", "quiet")}</div><div class="side-panel"><span>Sources</span><strong>3+</strong><span>Modrinth · CurseForge · local files</span></div></div>
+      <div class="flow-layout"><div class="feature-panel"><div class="tools-row"><h2>Install source</h2><span class="subtle">Task-backed</span></div><div class="provider-list"><button class="provider-card" data-action="open-mod-installer" data-resource-type="mods"><span class="provider-logo provider-modrinth"><img src="data:image/png;base64,CLOUDY_PROVIDER_MODRINTH" alt=""></span><span><strong>Modrinth</strong><small>Search projects and versions</small></span></button><button class="provider-card" data-action="open-mod-installer" data-resource-type="mods:curseforge"><span class="provider-logo provider-curseforge"><img src="data:image/png;base64,CLOUDY_PROVIDER_CURSEFORGE" alt=""></span><span><strong>CurseForge</strong><small>Official API key required for search</small></span></button></div></div><aside class="side-panel"><p class="eyebrow">Provider details</p><h2>Authors stay linked</h2><p class="subtle">Open the native resource workspace for real project metadata, clickable Modrinth and CurseForge author links, versions and install tasks.</p><div class="callout">Author pages, project links and provider extras are loaded from the existing native models. Cloudy does not invent author profiles or expose provider credentials.</div></aside></div></section>`;
   };
 
   const renderFiles = ({ instances, selectedInstanceId }) => {
     const selected = instances.find((item) => item.id === selectedInstanceId) || instances[0];
     workspace.innerHTML = `
       <section class="page"><div class="page-heading"><div><p class="eyebrow">Workspace files</p><h1>Files</h1><p class="lead">Open the selected instance folder with the native file model. No path is exposed to the web layer.</p></div>${shellButton("Back to library", "home", "quiet")}</div>
-      <div class="empty-note"><div><h2>${selected ? `Open files for ${escapeHtml(selected.name)}` : "Select an instance first"}</h2><p class="subtle">Drag & drop and editing continue in the native, permission-aware file workflow.</p><div style="margin-top:16px">${selected ? shellButton("Open instance folder", "open-files", "primary") : shellButton("Go to library", "home", "quiet")}</div></div></div></section>`;
+      <div class="empty-note"><div><h2>${selected ? `Open files for ${escapeHtml(selected.name)}` : "Select an instance first"}</h2><p class="subtle">Drag & drop and editing continue in the native, permission-aware file workflow.</p><div style="margin-top:16px">${selected ? shellButton("Open instance folder", "open-files", "primary", selected.id) : shellButton("Go to library", "home", "quiet")}</div></div></div></section>`;
   };
 
   const renderInstance = ({ instances, selectedInstanceId }) => {
@@ -297,7 +300,7 @@
     }
     const status = selected.running ? "Playing" : "Ready to play";
     const icon = selected.iconData ? `<img class="instance-detail-icon" src="${escapeHtml(selected.iconData)}" alt="${escapeHtml(selected.name)} icon">` : `<span class="instance-detail-placeholder">${escapeHtml((selected.name || "C").slice(0, 1).toUpperCase())}</span>`;
-    workspace.innerHTML = `<section class="page instance-detail-page"><div class="page-heading"><div><p class="eyebrow">Instance workspace</p><h1>${escapeHtml(selected.name)}</h1><p class="lead">A connected overview for this Minecraft build. Launching and resource changes remain handled by the native task pipeline.</p></div>${shellButton("Back to library", "home", "quiet")}</div><div class="instance-detail-hero"><div class="instance-detail-identity"><div class="instance-detail-art">${icon}</div><div><span class="status-chip"><span class="status-dot"></span>${status}</span><h2>${escapeHtml(selected.name)}</h2><p class="subtle">${escapeHtml(selected.managed ? `${selected.managedType || "Managed"} · ${selected.managedVersion || "version"}` : "Local Minecraft instance")}</p></div></div><div class="instance-detail-actions">${shellButton(selected.running ? "Open" : "Launch", "launch", "primary", selected.id)}${shellButton("Mods", "open-mods", "quiet", selected.id)}${shellButton("Files", "open-files", "quiet", selected.id)}</div></div><div class="detail-grid"><div class="feature-panel"><p class="eyebrow">Overview</p><h2>Build, inspect and play</h2><p class="subtle">Use the native instance page for version details, logs, screenshots, worlds and task progress.</p>${shellButton("Open native instance page", "open-native-instance", "quiet", selected.id)}</div><aside class="side-panel"><p class="eyebrow">Safe handoff</p><strong>Native workflow connected</strong><p class="subtle">Cloudy keeps account, file and installer permissions in the native layer.</p></aside></div></section>`;
+    workspace.innerHTML = `<section class="page instance-detail-page"><div class="page-heading"><div><p class="eyebrow">Instance workspace</p><h1>${escapeHtml(selected.name)}</h1><p class="lead">A connected overview for this Minecraft build. Launching and resource changes remain handled by the native task pipeline.</p></div>${shellButton("Back to library", "home", "quiet")}</div><div class="instance-detail-hero"><div class="instance-detail-identity"><div class="instance-detail-art">${icon}</div><div><span class="status-chip"><span class="status-dot"></span>${status}</span><h2>${escapeHtml(selected.name)}</h2><p class="subtle">${escapeHtml(selected.managed ? `${selected.managedType || "Managed"} · ${selected.managedVersion || "version"}` : "Local Minecraft instance")}</p></div></div><div class="instance-detail-actions">${shellButton(selected.running ? "Open" : "Launch", "launch", "primary", selected.id)}${shellButton("Mods", "open-mod-installer", "quiet", selected.id)}${shellButton("Files", "open-files", "quiet", selected.id)}</div></div><div class="detail-grid"><div class="feature-panel"><p class="eyebrow">Overview</p><h2>Build, inspect and play</h2><p class="subtle">Use the native instance page for version details, logs, screenshots, worlds and task progress.</p>${shellButton("Open native instance page", "open-native-instance", "quiet", selected.id)}</div><aside class="side-panel"><p class="eyebrow">Safe handoff</p><strong>Native workflow connected</strong><p class="subtle">Cloudy keeps account, file and installer permissions in the native layer.</p></aside></div></section>`;
   };
 
   const renderAccounts = ({ account, hasAccount, accounts }) => {
@@ -387,6 +390,28 @@
     }
     translateVisibleUi();
   }
+
+  document.addEventListener("click", (event) => {
+    const nativeButton = event.target.closest("[data-action=\"open-mod-installer\"], [data-action=\"open-mods\"], [data-action=\"open-files\"]");
+
+    if (nativeButton) {
+      const nativeCard = nativeButton.closest("[data-instance-id]");
+      const nativeId = nativeButton.dataset.instanceId || nativeCard?.dataset.instanceId || state().instances[0]?.id || "";
+      const action = nativeButton.dataset.action;
+      if (action === "open-mod-installer") {
+        setRoute("mods");
+        callNative("openModInstaller", nativeId, nativeButton.dataset.resourceType || "mods");
+      } else if (action === "open-files") {
+        setRoute("files");
+        callNative("openInstancePage", nativeId, "files");
+      } else {
+        callNative("openMods", nativeId);
+      }
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+  }, true);
 
   document.addEventListener("click", (event) => {
     const onboardingButton = event.target.closest("[data-onboard-action]");
@@ -481,8 +506,9 @@
       if (action === "open-skins") { setRoute("skins"); callNative("openSkinStudio"); }
       if (action === "mods") setRoute("mods");
       if (action === "open-mods") { setRoute("mods"); callNative("openMods", id); }
+      if (action === "open-mod-installer") { setRoute("mods"); callNative("openModInstaller", id, actionButton.dataset.resourceType || "mods"); }
       if (action === "files") setRoute("files");
-      if (action === "open-files") { setRoute("files"); callNative("openFiles", id); }
+      if (action === "open-files") { setRoute("files"); callNative("openInstancePage", id, "files"); }
       if (action === "open-running" && id) { selectedInstanceOverride = id; callNative("selectInstance", id); setRoute("instance"); }
       if (action === "open-instance" && id) { selectedInstanceOverride = id; callNative("selectInstance", id); setRoute("instance"); }
       if (action === "open-native-instance" && id) { callNative("openInstancePage", id, "overview"); }

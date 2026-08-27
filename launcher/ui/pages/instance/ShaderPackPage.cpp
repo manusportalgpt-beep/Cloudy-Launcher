@@ -76,6 +76,9 @@ ShaderPackPage::ShaderPackPage(MinecraftInstance* instance, ShaderPackFolderMode
 
 void ShaderPackPage::downloadShaderPack()
 {
+    if (requestEmbeddedDownload(id()))
+        return;
+
     m_downloadDialog = ResourceDownload::ResourceDownloadDialog::createShaderPack(this, m_model, m_instance);
     connect(this, &QObject::destroyed, m_downloadDialog, &QDialog::close);
     connect(m_downloadDialog, &QDialog::finished, this, &ShaderPackPage::downloadDialogFinished);
@@ -118,6 +121,9 @@ void ShaderPackPage::downloadDialogFinished(int result)
 
 void ShaderPackPage::updateShaderPacks()
 {
+    if (requestEmbeddedDownload(id()))
+        return;
+
     if (APPLICATION->settings()->get("ModMetadataDisabled").toBool()) {
         QMessageBox::critical(this, tr("Error"), tr("Shader pack updates are unavailable when metadata is disabled!"));
         return;
@@ -211,6 +217,9 @@ void ShaderPackPage::deleteShaderPackMetadata()
 
 void ShaderPackPage::changeShaderPackVersion()
 {
+    if (requestEmbeddedDownload(id()))
+        return;
+
     if (APPLICATION->settings()->get("ModMetadataDisabled").toBool()) {
         QMessageBox::critical(this, tr("Error"), tr("Shader pack updates are unavailable when metadata is disabled!"));
         return;

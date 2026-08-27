@@ -47,6 +47,7 @@
 #include "ui/widgets/PageContainer.h"
 
 #include "InstancePageProvider.h"
+#include "ui/pages/instance/ExternalResourcesPage.h"
 
 #include "icons/IconList.h"
 
@@ -77,11 +78,23 @@ InstanceWindow::InstanceWindow(MinecraftInstance* instance, QWidget* parent, boo
         m_container->setParentContainer(this);
         setCentralWidget(m_container);
         setContentsMargins(0, 0, 0, 0);
+
+        if (m_embedded) {
+            for (auto* page : m_container->getPages()) {
+                if (auto* resourcesPage = dynamic_cast<ExternalResourcesPage*>(page)) {
+                    connect(resourcesPage, &ExternalResourcesPage::embeddedDownloadRequested, this,
+                            &InstanceWindow::resourceInstallRequested);
+                } else if (auto* globalDataPacks = dynamic_cast<GlobalDataPackPage*>(page)) {
+                    connect(globalDataPacks, &GlobalDataPackPage::embeddedDownloadRequested, this,
+                            &InstanceWindow::resourceInstallRequested);
+                }
+            }
+        }
     }
 
     // Add custom buttons to the page container layout.
     {
-        auto horizontalLayout = new QHBoxLayout(this);
+        auto horizontalLayout = new QHBoxLayout();
         horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
         horizontalLayout->setContentsMargins(0, 0, 6, 6);
 

@@ -36,6 +36,7 @@
 #include "ExternalResourcesPage.h"
 #include "ui/dialogs/CustomMessageBox.h"
 #include "ui_ExternalResourcesPage.h"
+#include "ui/InstanceWindow.h"
 
 #include "DesktopServices.h"
 #include "Version.h"
@@ -208,8 +209,22 @@ bool ExternalResourcesPage::eventFilter(QObject* obj, QEvent* ev)
     return QWidget::eventFilter(obj, ev);
 }
 
+bool ExternalResourcesPage::requestEmbeddedDownload(const QString& resourceType)
+{
+    for (QWidget* ancestor = parentWidget(); ancestor != nullptr; ancestor = ancestor->parentWidget()) {
+        if (auto* instanceWindow = qobject_cast<InstanceWindow*>(ancestor); instanceWindow && instanceWindow->isEmbedded()) {
+            emit embeddedDownloadRequested(resourceType);
+            return true;
+        }
+    }
+    return false;
+}
+
 void ExternalResourcesPage::addItem()
 {
+    if (requestEmbeddedDownload(id()))
+        return;
+
     auto list = GuiUtil::BrowseForFiles(
         helpPage(), tr("Select %1", "Select whatever type of files the page contains. Example: 'Loader Mods'").arg(displayName()),
         m_fileSelectionFilter.arg(displayName()), APPLICATION->settings()->get("CentralModsDir").toString(), this->parentWidget());

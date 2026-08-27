@@ -82,6 +82,14 @@ void LaunchController::decideAccount()
         return;
     }
 
+    // An explicit offline nickname is self-contained and must not open the
+    // licensed-account prompt. Keep this temporary account out of the saved
+    // account list; it is used only to build the offline launch session.
+    if (m_wantedLaunchMode == LaunchMode::Offline && !m_offlineName.isEmpty()) {
+        m_accountToUse = MinecraftAccount::createOffline(m_offlineName);
+        return;
+    }
+
     // Select the account to use. If the instance has a specific account set, that will be used. Otherwise, the default account will be used
     auto* accounts = APPLICATION->accounts();
     const auto instanceAccountId = m_instance->settings()->get("InstanceAccountId").toString();
@@ -129,6 +137,11 @@ void LaunchController::decideAccount()
 
 LaunchDecision LaunchController::decideLaunchMode()
 {
+    if (!m_accountToUse && m_wantedLaunchMode == LaunchMode::Offline) {
+        m_actualLaunchMode = LaunchMode::Offline;
+        return LaunchDecision::Continue;
+    }
+
     if (!m_accountToUse || m_wantedLaunchMode == LaunchMode::Demo) {
         m_actualLaunchMode = LaunchMode::Demo;
         return LaunchDecision::Continue;

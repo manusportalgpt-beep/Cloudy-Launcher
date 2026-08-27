@@ -40,6 +40,7 @@
 
 #pragma once
 
+#include <deque>
 #include <memory>
 
 #include <QMainWindow>
@@ -47,6 +48,7 @@
 #include <QTimer>
 
 #include "minecraft/auth/MinecraftAccount.h"
+#include "QObjectPtr.h"
 
 class LaunchController;
 class NewsChecker;
@@ -64,9 +66,11 @@ class BaseProfilerFactory;
 class InstanceView;
 class KonamiCode;
 class InstanceTask;
+class Task;
 class LabeledToolButton;
 class Setting;
 class CloudyWebShell;
+class CloudyFilesPage;
 
 namespace Ui {
 class MainWindow;
@@ -94,6 +98,8 @@ class MainWindow : public QMainWindow {
     void setCloudyNavigationMode(bool notch);
     void webSelectInstance(const QString& id);
     void webOpenInstancePage(const QString& id, const QString& page);
+    void webOpenResourceInstaller(const QString& id, const QString& resourceType = QStringLiteral("mods"));
+    void webOpenFiles(const QString& id);
    signals:
     void isClosing();
 
@@ -244,6 +250,7 @@ class MainWindow : public QMainWindow {
     void setWorkspaceContext(const QString& title, const QString& subtitle, const QString& activeSection = {});
 
     void runModalTask(Task* task);
+    void runCloudyTask(unique_qobject_ptr<Task> task, const QString& title, const QString& iconName = {});
     void instanceFromInstanceTask(InstanceTask* task);
 
    private:
@@ -276,9 +283,19 @@ class MainWindow : public QMainWindow {
     MinecraftInstance* m_selectedInstance = nullptr;
     QString m_currentInstIcon;
 
+    struct CloudyQueuedTask {
+        unique_qobject_ptr<Task> task;
+        QString title;
+        QString iconName;
+    };
+
+    void startNextCloudyTask();
+
     // managed by the application object
     Task* m_versionLoadTask = nullptr;
     CloudyWebShell* m_cloudyWebShell = nullptr;
+    unique_qobject_ptr<Task> m_cloudyTask;
+    std::deque<CloudyQueuedTask> m_cloudyTaskQueue;
     QFrame* m_cloudySidebar = nullptr;
     QToolBar* m_cloudyNotch = nullptr;
     QButtonGroup* m_cloudyNavGroup = nullptr;

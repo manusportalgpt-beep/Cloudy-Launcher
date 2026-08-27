@@ -46,6 +46,7 @@
 #include "ui_MainWindow.h"
 #include "ui/CloudyWebBridge.h"
 #include "ui/CloudyWebShell.h"
+#include "ui/CloudyFilesPage.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -113,6 +114,7 @@
 #include "ui/dialogs/NewInstanceDialog.h"
 #include "ui/dialogs/NewsDialog.h"
 #include "ui/dialogs/ProgressDialog.h"
+#include "ui/dialogs/ResourceDownloadDialog.h"
 #include "ui/dialogs/skins/SkinManageDialog.h"
 #include "ui/instanceview/InstanceDelegate.h"
 #include "ui/instanceview/InstanceProxyModel.h"
@@ -137,6 +139,8 @@
 #include "KonamiCode.h"
 
 #include "InstanceCopyTask.h"
+#include "tasks/Task.h"
+#include "net/Mode.h"
 #include "InstanceDirUpdate.h"
 
 #include "Json.h"
@@ -1269,10 +1273,49 @@ void MainWindow::runModalTask(Task* task)
     loadDialog.execWithTask(task);
 }
 
+void MainWindow::runCloudyTask(unique_qobject_ptr<Task> task, const QString& title, const QString& iconName)
+{
+    if (!task || !m_cloudyWebShell)
+        return;
+
+    CloudyQueuedTask queued{ std::move(task), title, iconName };
+    m_cloudyTaskQueue.push_back(std::move(queued));
+    m_cloudyWebShell->setTaskQueueCount(m_cloudyTaskQueue.size() - (m_cloudyTask ? 0 : 1));
+    startNextCloudyTask();
+}
+
+void MainWindow::startNextCloudyTask()
+{
+    if (m_cloudyTask || m_cloudyTaskQueue.empty() || !m_cloudyWebShell)
+        return;
+
+    auto queued = std::move(m_cloudyTaskQueue.front());
+    m_cloudyTaskQueue.pop_front();
+    m_cloudyTask = std::move(queued.task);
+    auto* runningTask = m_cloudyTask.get();
+    m_cloudyWebShell->setTaskQueueCount(m_cloudyTaskQueue.size());
+    connect(runningTask, &Task::failed, this, [](const QString& reason) { qWarning() << "Cloudy task failed:" << reason; });
+    connect(runningTask, &Task::finished, this, [this, runningTask] {
+        if (runningTask->wasSuccessful())
+            refreshInstances();
+        QTimer::singleShot(0, this, [this, runningTask] {
+            if (m_cloudyTask.get() != runningTask)
+                return;
+            m_cloudyTask.reset();
+            startNextCloudyTask();
+        });
+    });
+    m_cloudyWebShell->watchTask(runningTask, queued.title, queued.iconName);
+    QMetaObject::invokeMethod(runningTask, &Task::start, Qt::QueuedConnection);
+}
+
 void MainWindow::instanceFromInstanceTask(InstanceTask* rawTask)
 {
     unique_qobject_ptr<Task> task(APPLICATION->instances()->wrapInstanceTask(rawTask));
-    runModalTask(task.get());
+    if (m_cloudyWebShell)
+        runCloudyTask(unique_qobject_ptr<Task>(task.release()), tr("Create instance"), QStringLiteral("new"));
+    else
+        runModalTask(task.get());
 }
 
 void MainWindow::on_actionCopyInstance_triggered()
@@ -1658,7 +1701,7 @@ void MainWindow::setSelectedInstanceById(const QString& id)
         return;
 
     const QModelIndex index = APPLICATION->instances()->getInstanceIndexById(id);
-    if (index.isValid() && view && view->selectionModel() && proxymodel) {
+    if (!m_cloudyWebShell && index.isValid() && view && view->selectionModel() && proxymodel) {
         const QModelIndex selectionIndex = proxymodel->mapFromSource(index);
         if (selectionIndex.isValid()) {
             view->selectionModel()->setCurrentIndex(selectionIndex, QItemSelectionModel::ClearAndSelect);
@@ -1680,10 +1723,89 @@ void MainWindow::webSelectInstance(const QString& id)
         APPLICATION->settings()->set(QStringLiteral("SelectedInstance"), m_selectedInstance->id());
 }
 
+void MainWindow::webOpenResourceInstaller(const QString& id, const QString& resourceType)
+{
+    if (!id.isEmpty())
+        webSelectInstance(id);
+    if (!m_selectedInstance || !m_selectedInstance->canEdit() || !m_cloudyWebShell)
+        return;
+
+    const auto resourceSpec = resourceType.trimmed().toLower();
+    const auto type = resourceSpec.section(':', 0, 0);
+    const auto provider = resourceSpec.section(':', 1, 1);
+    ResourceDownload::ResourceDownloadDialog* dialog = nullptr;
+    QString title;
+    QString iconName;
+    if (type == QStringLiteral("mods")) {
+        auto* profile = m_selectedInstance->getPackProfile();
+        if (profile->getComponentVersion(QStringLiteral("net.minecraft")).isEmpty()) {
+            const auto loadResult = profile->reload(Net::Mode::Offline);
+            if (!loadResult)
+                qWarning() << "Cloudy resource installer could not load instance profile:" << loadResult.error;
+        }
+        const auto modLoaders = profile->getModLoaders();
+        const auto supportedLoaders = profile->getSupportedModLoaders();
+        if (!modLoaders.has_value() && !supportedLoaders.has_value()) {
+            webOpenInstancePage(m_selectedInstance->id(), QStringLiteral("mods"));
+            return;
+        }
+        dialog = ResourceDownload::ResourceDownloadDialog::createMod(this, m_selectedInstance->loaderModList(), m_selectedInstance, false, true);
+        title = tr("Install mods");
+        iconName = QStringLiteral("loadermods");
+    } else if (type == QStringLiteral("resourcepacks")) {
+        dialog = ResourceDownload::ResourceDownloadDialog::createResourcePack(this, m_selectedInstance->resourcePackList(), m_selectedInstance, false, true);
+        title = tr("Install resource packs");
+        iconName = QStringLiteral("resourcepacks");
+    } else if (type == QStringLiteral("texturepacks")) {
+        dialog = ResourceDownload::ResourceDownloadDialog::createTexturePack(this, m_selectedInstance->texturePackList(), m_selectedInstance, false, true);
+        title = tr("Install texture packs");
+        iconName = QStringLiteral("resourcepacks");
+    } else if (type == QStringLiteral("shaderpacks")) {
+        dialog = ResourceDownload::ResourceDownloadDialog::createShaderPack(this, m_selectedInstance->shaderPackList(), m_selectedInstance, false, true);
+        title = tr("Install shader packs");
+        iconName = QStringLiteral("shaderpacks");
+    } else if (type == QStringLiteral("datapacks")) {
+        dialog = ResourceDownload::ResourceDownloadDialog::createDataPack(this, m_selectedInstance->dataPackList(), m_selectedInstance, false, true);
+        title = tr("Install data packs");
+        iconName = QStringLiteral("datapacks");
+    }
+
+    if (!dialog)
+        return;
+    if (provider == QStringLiteral("curseforge"))
+        dialog->selectPage(QStringLiteral("curseforge"));
+
+    connect(dialog, &ResourceDownload::ResourceDownloadDialog::embeddedTaskRequested, this,
+            [this, iconName](Task* task, const QString& taskTitle) {
+                runCloudyTask(unique_qobject_ptr<Task>(task), taskTitle, iconName);
+            });
+    connect(dialog, &QDialog::finished, this, [this](int) { restoreMainContent(); });
+
+    setWorkspaceContext(title, tr("Search, review and install resources without leaving Cloudy"), QStringLiteral("cloudyNavMods"));
+    showEmbeddedPage(dialog);
+}
+
+void MainWindow::webOpenFiles(const QString& id)
+{
+    if (!id.isEmpty())
+        webSelectInstance(id);
+    if (!m_selectedInstance || !m_selectedInstance->canEdit() || !m_cloudyWebShell)
+        return;
+
+    auto* filesPage = new CloudyFilesPage(m_selectedInstance);
+    connect(filesPage, &CloudyFilesPage::closeRequested, this, &MainWindow::restoreMainContent, Qt::UniqueConnection);
+    setWorkspaceContext(tr("Files"), tr("Browse and edit the selected instance without leaving Cloudy"), QStringLiteral("cloudyNavMods"));
+    showEmbeddedPage(filesPage);
+}
+
 void MainWindow::webOpenInstancePage(const QString& id, const QString& page)
 {
     if (!id.isEmpty())
         webSelectInstance(id);
+    if (page == QStringLiteral("files")) {
+        webOpenFiles(QString());
+        return;
+    }
     if (!m_selectedInstance)
         return;
 
@@ -1693,6 +1815,9 @@ void MainWindow::webOpenInstancePage(const QString& id, const QString& page)
             editor->setWindowFlags(Qt::Widget);
             editor->setAttribute(Qt::WA_DeleteOnClose, false);
             connect(editor, &InstanceWindow::isClosing, this, &MainWindow::restoreMainContent, Qt::UniqueConnection);
+            connect(editor, &InstanceWindow::resourceInstallRequested, this, [this, id](const QString& resourceType) {
+                webOpenResourceInstaller(id, resourceType);
+            });
             setWorkspaceContext(tr("Instance workspace"), tr("Configure this instance without leaving Cloudy"));
             showEmbeddedPage(editor);
         }

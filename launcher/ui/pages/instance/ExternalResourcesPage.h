@@ -36,7 +36,11 @@ class ExternalResourcesPage : public QMainWindow, public BasePage {
 
     void retranslate() override;
 
+   signals:
+    void embeddedDownloadRequested(QString resourceType);
+
    protected:
+    bool requestEmbeddedDownload(const QString& resourceType);
     bool eventFilter(QObject* obj, QEvent* ev) override;
     bool listFilter(QKeyEvent* ev);
     QMenu* createPopupMenu() override;

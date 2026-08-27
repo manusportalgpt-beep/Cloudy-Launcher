@@ -61,6 +61,7 @@ class InstanceWindow : public QMainWindow, public BasePageContainer {
     void refreshContainer() override;
 
     QString instanceId();
+    bool isEmbedded() const { return m_embedded; }
 
     // save all settings and changes (prepare for launch)
     bool saveAll();
@@ -70,6 +71,7 @@ class InstanceWindow : public QMainWindow, public BasePageContainer {
 
    signals:
     void isClosing();
+    void resourceInstallRequested(QString resourceType);
 
    private slots:
     void instanceLaunchTaskChanged(LaunchTask* proc);

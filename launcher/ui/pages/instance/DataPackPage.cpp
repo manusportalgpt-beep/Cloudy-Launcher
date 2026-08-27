@@ -64,6 +64,9 @@ void DataPackPage::updateFrame(const QModelIndex& current, [[maybe_unused]] cons
 
 void DataPackPage::downloadDataPacks()
 {
+    if (requestEmbeddedDownload(id()))
+        return;
+
     m_downloadDialog = ResourceDownload::ResourceDownloadDialog::createDataPack(this, m_model, m_instance);
     connect(this, &QObject::destroyed, m_downloadDialog, &QDialog::close);
     connect(m_downloadDialog, &QDialog::finished, this, &DataPackPage::downloadDialogFinished);
@@ -106,6 +109,9 @@ void DataPackPage::downloadDialogFinished(int result)
 
 void DataPackPage::updateDataPacks()
 {
+    if (requestEmbeddedDownload(id()))
+        return;
+
     if (APPLICATION->settings()->get("ModMetadataDisabled").toBool()) {
         QMessageBox::critical(this, tr("Error"), tr("Data pack updates are unavailable when metadata is disabled!"));
         return;
@@ -199,6 +205,9 @@ void DataPackPage::deleteDataPackMetadata()
 
 void DataPackPage::changeDataPackVersion()
 {
+    if (requestEmbeddedDownload(id()))
+        return;
+
     if (APPLICATION->settings()->get("ModMetadataDisabled").toBool()) {
         QMessageBox::critical(this, tr("Error"), tr("Data pack updates are unavailable when metadata is disabled!"));
         return;
@@ -327,6 +336,7 @@ void GlobalDataPackPage::updateContent()
 
     if (shouldDisplay()) {
         m_underlyingPage = new DataPackPage(m_instance, m_instance->dataPackList());
+        connect(m_underlyingPage, &DataPackPage::embeddedDownloadRequested, this, &GlobalDataPackPage::embeddedDownloadRequested);
         m_underlyingPage->setParentContainer(m_container);
         m_underlyingPage->updateExtraInfo = [this](QString id, QString value) { updateExtraInfo(std::move(id), std::move(value)); };
 

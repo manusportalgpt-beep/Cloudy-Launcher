@@ -81,6 +81,9 @@ void ResourcePackPage::updateFrame(const QModelIndex& current, [[maybe_unused]] 
 
 void ResourcePackPage::downloadResourcePacks()
 {
+    if (requestEmbeddedDownload(id()))
+        return;
+
     m_downloadDialog = ResourceDownload::ResourceDownloadDialog::createResourcePack(this, m_model, m_instance);
     connect(this, &QObject::destroyed, m_downloadDialog, &QDialog::close);
     connect(m_downloadDialog, &QDialog::finished, this, &ResourcePackPage::downloadDialogFinished);
@@ -123,6 +126,9 @@ void ResourcePackPage::downloadDialogFinished(int result)
 
 void ResourcePackPage::updateResourcePacks()
 {
+    if (requestEmbeddedDownload(id()))
+        return;
+
     if (APPLICATION->settings()->get("ModMetadataDisabled").toBool()) {
         QMessageBox::critical(this, tr("Error"), tr("Resource pack updates are unavailable when metadata is disabled!"));
         return;
@@ -216,6 +222,9 @@ void ResourcePackPage::deleteResourcePackMetadata()
 
 void ResourcePackPage::changeResourcePackVersion()
 {
+    if (requestEmbeddedDownload(id()))
+        return;
+
     if (APPLICATION->settings()->get("ModMetadataDisabled").toBool()) {
         QMessageBox::critical(this, tr("Error"), tr("Resource pack updates are unavailable when metadata is disabled!"));
         return;

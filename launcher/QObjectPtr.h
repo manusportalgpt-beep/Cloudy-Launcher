@@ -11,7 +11,16 @@
  * Calls deleteLater() instead of destroying the contained object immediately
  */
 template <typename T>
-using unique_qobject_ptr = QScopedPointer<T, QScopedPointerDeleteLater>;
+struct QObjectDeleteLaterDeleter {
+    void operator()(T* pointer) const
+    {
+        if (pointer)
+            pointer->deleteLater();
+    }
+};
+
+template <typename T>
+using unique_qobject_ptr = std::unique_ptr<T, QObjectDeleteLaterDeleter<T>>;
 
 /**
  * A shared pointer class with shared pointer semantics intended for derivates of QObject

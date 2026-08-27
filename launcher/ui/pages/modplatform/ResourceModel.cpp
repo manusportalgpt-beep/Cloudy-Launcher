@@ -63,9 +63,11 @@ auto ResourceModel::data(const QModelIndex& index, int role) const -> QVariant
         }
         case Qt::DecorationRole: {
             if (APPLICATION_DYN) {
-                if (auto iconOrNone = const_cast<ResourceModel*>(this)->getIcon(const_cast<QModelIndex&>(index), pack->logoUrl);
-                    iconOrNone.has_value()) {
-                    return iconOrNone.value();
+                if (!pack->logoUrl.isEmpty()) {
+                    if (auto iconOrNone = const_cast<ResourceModel*>(this)->getIcon(const_cast<QModelIndex&>(index), pack->logoUrl);
+                        iconOrNone.has_value() && !iconOrNone->isNull()) {
+                        return iconOrNone.value();
+                    }
                 }
 
                 return QIcon::fromTheme("screenshot-placeholder");
@@ -339,8 +341,11 @@ std::optional<ResourceAPI::SortingMethod> ResourceModel::getCurrentSortingMethod
 std::optional<QIcon> ResourceModel::getIcon(QModelIndex& index, const QUrl& url)
 {
     QPixmap pixmap;
-    if (QPixmapCache::find(url.toString(), &pixmap)) {
-        return { pixmap };
+    if (!url.isValid() || url.isEmpty())
+        return {};
+
+    if (QPixmapCache::find(url.toString(), &pixmap) && !pixmap.isNull()) {
+        return { QIcon(pixmap) };
     }
 
     if (!m_current_icon_job) {
@@ -363,15 +368,19 @@ std::optional<QIcon> ResourceModel::getIcon(QModelIndex& index, const QUrl& url)
     auto fullFilePath = cacheEntry->getFullPath();
     connect(iconFetchAction.get(), &Task::succeeded, this, [this, url, fullFilePath, index] {
         auto icon = QIcon(fullFilePath);
-        QPixmapCache::insert(url.toString(), icon.pixmap(icon.actualSize({ 64, 64 })));
+        const auto iconSize = icon.actualSize({ 64, 64 });
+        const auto iconPixmap = iconSize.isValid() ? icon.pixmap(iconSize) : QPixmap();
+        if (!iconPixmap.isNull())
+            QPixmapCache::insert(url.toString(), iconPixmap);
 
         m_currently_running_icon_actions.remove(url);
 
         emit dataChanged(index, index, { Qt::DecorationRole });
     });
-    connect(iconFetchAction.get(), &Task::failed, this, [this, url] {
+    connect(iconFetchAction.get(), &Task::failed, this, [this, url, index] {
         m_currently_running_icon_actions.remove(url);
         m_failed_icon_actions.insert(url);
+        emit dataChanged(index, index, { Qt::DecorationRole });
     });
 
     m_currently_running_icon_actions.insert(url);

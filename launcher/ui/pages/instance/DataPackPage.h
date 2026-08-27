@@ -51,6 +51,7 @@ class DataPackPage : public ExternalResourcesPage {
  * Syncs DataPackPage with GlobalDataPacksPath and shows/hides based on GlobalDataPacksEnabled.
  */
 class GlobalDataPackPage : public QWidget, public BasePage {
+    Q_OBJECT
    public:
     explicit GlobalDataPackPage(MinecraftInstance* instance, QWidget* parent = nullptr);
 
@@ -66,6 +67,9 @@ class GlobalDataPackPage : public QWidget, public BasePage {
     void closedImpl() override;
 
     void setParentContainer(BasePageContainer* container) override;
+
+   signals:
+    void embeddedDownloadRequested(QString resourceType);
 
    private:
     void updateContent();
