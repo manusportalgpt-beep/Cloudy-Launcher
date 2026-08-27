@@ -449,6 +449,7 @@ button.topbar-status:hover, button.topbar-status.has-running { color: var(--text
 .inline-form { display: flex; gap: 8px; }
 .inline-form .form-input { min-width: 0; }
 .nickname-form > small { display: block; margin-top: 8px; color: var(--faint); font-size: 9px; }
+.form-error { margin: 8px 0 0; color: #bf6b79; font-size: 10px; line-height: 1.35; }
 .onboarding-footer { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
 .onboarding-footer-note { flex: 1; color: var(--faint); text-align: center; font-size: 10px; }
 .setting-title { display: flex; align-items: center; gap: 11px; min-width: 0; }
