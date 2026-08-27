@@ -1652,12 +1652,25 @@ void MainWindow::setSelectedInstanceById(const QString& id)
 {
     if (id.isNull())
         return;
+
+    auto* instance = APPLICATION->instances()->getInstanceById(id);
+    if (!instance)
+        return;
+
     const QModelIndex index = APPLICATION->instances()->getInstanceIndexById(id);
-    if (index.isValid()) {
-        QModelIndex selectionIndex = proxymodel->mapFromSource(index);
-        view->selectionModel()->setCurrentIndex(selectionIndex, QItemSelectionModel::ClearAndSelect);
-        updateStatusCenter();
+    if (index.isValid() && view && view->selectionModel() && proxymodel) {
+        const QModelIndex selectionIndex = proxymodel->mapFromSource(index);
+        if (selectionIndex.isValid()) {
+            view->selectionModel()->setCurrentIndex(selectionIndex, QItemSelectionModel::ClearAndSelect);
+            updateStatusCenter();
+            return;
+        }
     }
+
+    // The unified Cloudy web shell can intentionally hide the legacy instance
+    // view, leaving it without a selection model. Keep web-originated native
+    // handoffs functional by selecting the real instance directly in that mode.
+    m_selectedInstance = instance;
 }
 
 void MainWindow::webSelectInstance(const QString& id)
@@ -1675,7 +1688,7 @@ void MainWindow::webOpenInstancePage(const QString& id, const QString& page)
         return;
 
     if (m_selectedInstance->canEdit()) {
-        auto* editor = APPLICATION->showInstanceWindow(m_selectedInstance, page);
+        auto* editor = APPLICATION->showInstanceWindow(m_selectedInstance, page, true);
         if (editor) {
             editor->setWindowFlags(Qt::Widget);
             editor->setAttribute(Qt::WA_DeleteOnClose, false);

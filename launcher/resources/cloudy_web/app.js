@@ -216,8 +216,8 @@
           <span class="instance-status"><span class="status-dot"></span>${item.running ? "Playing" : "Available"}</span>
           <div class="card-actions">
             ${item.running ? shellButton("Open", "launch", "quiet") : shellButton("Launch", "launch", "primary")}
-            ${shellButton("Mods", "mods", "quiet")}
-            ${shellButton("Files", "files", "quiet")}
+            <button class="action-button quiet" data-route="mods">Mods</button>
+            <button class="action-button quiet" data-route="files">Files</button>
           </div>
         </div>
       </article>`).join("");
