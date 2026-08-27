@@ -1280,7 +1280,7 @@ void MainWindow::runCloudyTask(unique_qobject_ptr<Task> task, const QString& tit
 
     CloudyQueuedTask queued{ std::move(task), title, iconName };
     m_cloudyTaskQueue.push_back(std::move(queued));
-    m_cloudyWebShell->setTaskQueueCount(m_cloudyTaskQueue.size() - (m_cloudyTask ? 0 : 1));
+    m_cloudyWebShell->setTaskQueueCount(static_cast<int>(m_cloudyTaskQueue.size()) - (m_cloudyTask ? 0 : 1));
     startNextCloudyTask();
 }
 
@@ -1293,7 +1293,7 @@ void MainWindow::startNextCloudyTask()
     m_cloudyTaskQueue.pop_front();
     m_cloudyTask = std::move(queued.task);
     auto* runningTask = m_cloudyTask.get();
-    m_cloudyWebShell->setTaskQueueCount(m_cloudyTaskQueue.size());
+    m_cloudyWebShell->setTaskQueueCount(static_cast<int>(m_cloudyTaskQueue.size()));
     connect(runningTask, &Task::failed, this, [](const QString& reason) { qWarning() << "Cloudy task failed:" << reason; });
     connect(runningTask, &Task::finished, this, [this, runningTask] {
         if (runningTask->wasSuccessful())
