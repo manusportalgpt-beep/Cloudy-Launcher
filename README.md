@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>A modern Minecraft launcher built on the proven Prism Launcher foundation.</strong><br>
+  <strong>A modern, focused Minecraft launcher for calm desktop play.</strong><br>
   A focused desktop experience for instances, mods, resources, accounts, files, and safe recovery.
 </p>
 
@@ -16,9 +16,9 @@
 
 ## What is Cloudy Launcher?
 
-Cloudy Launcher is an independent open-source fork of [Prism Launcher](https://github.com/PrismLauncher/PrismLauncher). It keeps the mature launcher, account, metadata, download, and Minecraft instance foundations while evolving the product around a clearer, safer desktop workflow.
+Cloudy Launcher is an independent open-source GPL-3.0 fork of an established Minecraft launcher codebase. It keeps the mature account, metadata, download, and Minecraft instance foundations while evolving the product around a clearer, safer desktop workflow.
 
-Cloudy is **not affiliated with or endorsed by Prism Launcher**. Prism Launcher, MultiMC, and PolyMC copyrights and license notices remain part of the upstream codebase where applicable.
+Cloudy is independently maintained and is not affiliated with any upstream project or service. Required upstream copyright, license, and third-party notices remain in the repository where applicable.
 
 ## Product direction
 
@@ -34,7 +34,7 @@ The migration is delivered incrementally. Features are advertised as available o
 
 ## Building
 
-Cloudy Launcher follows the upstream Prism Launcher build requirements and CMake workflow. See the upstream [build instructions](https://prismlauncher.org/wiki/development/build-instructions/) for platform dependencies, then configure and build this repository from the `develop` branch.
+Cloudy Launcher uses a CMake-based workflow. Install the platform dependencies for Qt 6, Qt WebEngine, CMake and a supported compiler, then configure and build this repository from the `develop` branch.
 
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Release
@@ -49,9 +49,8 @@ Issues and pull requests are welcome. Keep changes focused, preserve existing li
 
 Cloudy Launcher is distributed under the GNU General Public License, version 3 or later. See [LICENSE](LICENSE).
 
-This repository contains code originating from Prism Launcher, MultiMC, PolyMC, and other third-party components. Their respective notices and licenses are retained in the repository.
+This repository contains code originating from upstream launcher projects and other third-party components. Their respective notices and licenses are retained in the repository; this attribution is a legal requirement, not a user-interface branding choice.
 
-## Upstream
+## Project source
 
-- Prism Launcher source: https://github.com/PrismLauncher/PrismLauncher
 - Cloudy Launcher source: https://github.com/manusportalgpt-beep/Cloudy-Launcher

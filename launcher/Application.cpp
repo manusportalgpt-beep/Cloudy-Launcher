@@ -658,6 +658,10 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("BackgroundCat", QString("kitteh"));
 
         // Remembered state
+        m_settings->registerSetting("CloudyOnboardingComplete", false);
+        m_settings->registerSetting("CloudyWeatherTheme", QStringLiteral("cloudy"));
+        m_settings->registerSetting("CloudySnowVariant", QStringLiteral("light"));
+        m_settings->registerSetting("CloudySoundEnabled", true);
         m_settings->registerSetting("LastUsedGroupForNewInstance", QString());
 
         m_settings->registerSetting("MenuBarInsteadOfToolBar", false);
@@ -724,7 +728,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("JsonEditor", QString());
 
         // Language
-        m_settings->registerSetting("Language", QString());
+        m_settings->registerSetting("Language", QStringLiteral("en_US"));
         m_settings->registerSetting("UseSystemLocale", false);
 
         // Console
@@ -747,7 +751,9 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
         // Memory
         m_settings->registerSetting({ "MinMemAlloc", "MinMemoryAlloc" }, 512);
-        m_settings->registerSetting({ "MaxMemAlloc", "MaxMemoryAlloc" }, SysInfo::defaultMaxJvmMem());
+        // Cloudy onboarding starts with a predictable 4096 MB global heap.
+        // Existing installations keep their already saved value.
+        m_settings->registerSetting({ "MaxMemAlloc", "MaxMemoryAlloc" }, 4096);
         m_settings->registerSetting("PermGen", 128);
         m_settings->registerSetting("LowMemWarning", true);
 
@@ -1303,6 +1309,16 @@ bool Application::checkWebEngineRuntime()
 #else
     return true;
 #endif
+}
+
+void Application::completeFirstRun()
+{
+    if (!m_settings)
+        return;
+
+    // Writing the canonical configuration is the durable onboarding marker.
+    m_settings->set("CloudyOnboardingComplete", true);
+    m_firstRun = false;
 }
 
 bool Application::createSetupWizard()

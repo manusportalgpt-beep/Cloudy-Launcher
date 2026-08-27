@@ -38,6 +38,13 @@ class CloudyWebBridge : public QObject {
     Q_PROPERTY(QVariantList accountData READ accounts NOTIFY stateChanged)
     Q_PROPERTY(QVariantList instanceData READ instances NOTIFY stateChanged)
     Q_PROPERTY(QVariantMap paletteData READ paletteData NOTIFY stateChanged)
+    Q_PROPERTY(QVariantMap storageData READ storageData NOTIFY stateChanged)
+    Q_PROPERTY(QString language READ language NOTIFY stateChanged)
+    Q_PROPERTY(QString weatherTheme READ weatherTheme NOTIFY stateChanged)
+    Q_PROPERTY(QString snowVariant READ snowVariant NOTIFY stateChanged)
+    Q_PROPERTY(bool soundsEnabled READ soundsEnabled NOTIFY stateChanged)
+    Q_PROPERTY(int globalMaxMemory READ globalMaxMemory NOTIFY stateChanged)
+    Q_PROPERTY(QString selectedInstanceId READ selectedInstanceId NOTIFY stateChanged)
 
    public:
     explicit CloudyWebBridge(MainWindow* window, QObject* parent = nullptr);
@@ -48,6 +55,13 @@ class CloudyWebBridge : public QObject {
     Q_INVOKABLE bool hasActiveAccount() const;
     Q_INVOKABLE bool firstRun() const;
     Q_INVOKABLE QVariantMap paletteData() const;
+    Q_INVOKABLE QVariantMap storageData() const;
+    Q_INVOKABLE QString language() const;
+    Q_INVOKABLE QString weatherTheme() const;
+    Q_INVOKABLE QString snowVariant() const;
+    Q_INVOKABLE bool soundsEnabled() const;
+    Q_INVOKABLE int globalMaxMemory() const;
+    Q_INVOKABLE QString selectedInstanceId() const;
 
    public slots:
     void openLibrary();
@@ -57,6 +71,7 @@ class CloudyWebBridge : public QObject {
     void openSkinStudio();
     void openMods(const QString& instanceId);
     void openFiles(const QString& instanceId);
+    void openInstancePage(const QString& instanceId, const QString& page = QStringLiteral("overview"));
     void selectInstance(const QString& instanceId);
     void launchInstance(const QString& instanceId);
     void refreshInstances();
@@ -66,6 +81,13 @@ class CloudyWebBridge : public QObject {
     void toggleMaximizeWindow();
     void closeWindow();
     void beginWindowDrag();
+    void setLanguage(const QString& language);
+    void setWeatherTheme(const QString& theme);
+    void setSnowVariant(const QString& variant);
+    void setSoundsEnabled(bool enabled);
+    void setGlobalMemory(int megabytes);
+    bool addOfflineAccount(const QString& username);
+    void completeFirstRun();
 
    signals:
     void stateChanged();

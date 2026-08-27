@@ -121,6 +121,7 @@ class Application : public QApplication {
     SettingsObject* settings() const { return m_settings.get(); }
     SettingsObject* playtimeSettings() const { return m_playtimeSettings.get(); }
     bool isFirstRun() const { return m_firstRun; }
+    void completeFirstRun();
 
     qint64 timeSinceStart() const { return m_startTime.msecsTo(QDateTime::currentDateTime()); }
 
