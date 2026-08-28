@@ -38,6 +38,10 @@
 #include "MinecraftInstance.h"
 #include "Application.h"
 #include "BuildConfig.h"
+#include "minecraft/auth/AccountList.h"
+
+#include <QDesktopServices>
+#include <QUrl>
 #include "Json.h"
 #include "QObjectPtr.h"
 #include "settings/Setting.h"
@@ -317,6 +321,26 @@ void MinecraftInstance::populateLaunchMenu(QMenu* menu)
     connect(normalLaunch, &QAction::triggered, this, [this] { APPLICATION->launch(this); });
     connect(normalLaunchOffline, &QAction::triggered, this, [this] { APPLICATION->launch(this, LaunchMode::Offline); });
     connect(normalLaunchDemo, &QAction::triggered, this, [this] { APPLICATION->launch(this, LaunchMode::Demo); });
+
+    menu->addSeparator();
+    auto* bedrockLaunch = menu->addAction(tr("Bedrock — Minecraft for Windows"));
+    bedrockLaunch->setStatusTip(tr("Open the installed Minecraft for Windows app"));
+    const auto account = APPLICATION->accounts()->defaultAccount();
+    const bool licensed = account && account->accountType() != AccountType::Offline && account->ownsMinecraft();
+    bedrockLaunch->setEnabled(licensed);
+    if (!licensed) {
+        const bool nicknameAccount = account && account->accountType() == AccountType::Offline;
+        bedrockLaunch->setToolTip(nicknameAccount ? tr("Данная версия недоступна при входе по нику")
+                                                   : tr("Bedrock requires a licensed Microsoft account"));
+        bedrockLaunch->setStatusTip(bedrockLaunch->toolTip());
+    }
+    connect(bedrockLaunch, &QAction::triggered, this, [this] {
+#ifdef Q_OS_WIN
+        QDesktopServices::openUrl(QUrl(QStringLiteral("minecraft://")));
+#else
+        QDesktopServices::openUrl(QUrl(QStringLiteral("ms-windows-store://pdp/?productid=9NBLGGH2JHXJ")));
+#endif
+    });
 
     QString profilersTitle = tr("Profilers");
     menu->addSeparator()->setText(profilersTitle);
