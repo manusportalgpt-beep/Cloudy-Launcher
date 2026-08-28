@@ -461,6 +461,8 @@
   document.addEventListener("click", (event) => {
     const onboardingButton = event.target.closest("[data-onboard-action]");
     if (onboardingButton) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
       const action = onboardingButton.dataset.onboardAction;
       const value = onboardingButton.dataset.value || "";
       if (action === "jump") {
@@ -519,7 +521,7 @@
         if (onboardingStep === 5 && !onboardingSecurityAccepted) {
           return;
         }
-        if (onboardingStep >= 6) {
+        if (onboardingStep >= 10) {
           callNative("completeFirstRun");
           try { localStorage.removeItem(onboardingStorageKey); } catch (_) {}
           onboardingStep = 1;
@@ -535,12 +537,16 @@
 
     const routeButton = event.target.closest("[data-route]");
     if (routeButton) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
       setRoute(routeButton.dataset.route);
       return;
     }
 
     const themeButton = event.target.closest("[data-weather-theme]");
     if (themeButton) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
       chooseWeatherTheme(themeButton.dataset.weatherTheme);
       event.stopPropagation();
       return;
@@ -548,6 +554,8 @@
 
     const snowButton = event.target.closest("[data-snow-variant]");
     if (snowButton) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
       try { localStorage.setItem("cloudy-snow-variant", snowButton.dataset.snowVariant); } catch (_) {}
       document.documentElement.dataset.snowVariant = snowButton.dataset.snowVariant;
       callNative("setSnowVariant", snowButton.dataset.snowVariant);
@@ -558,6 +566,8 @@
 
     const actionButton = event.target.closest("[data-action]");
     if (actionButton) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
       const action = actionButton.dataset.action;
       const card = actionButton.closest("[data-instance-id]");
       const id = actionButton.dataset.instanceId || card?.dataset.instanceId || state().instances[0]?.id || "";
