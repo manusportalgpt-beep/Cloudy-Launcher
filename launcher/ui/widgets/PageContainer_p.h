@@ -17,6 +17,7 @@
 
 #include <QEvent>
 #include <QListView>
+#include <QResizeEvent>
 #include <QScrollBar>
 #include <QStyledItemDelegate>
 
@@ -90,19 +91,51 @@ class PageView : public QListView {
         setItemDelegate(new PageViewDelegate(this));
         setViewMode(QListView::ListMode);
         setFlow(QListView::LeftToRight);
-        setWrapping(false);
+        setWrapping(true);
+        setResizeMode(QListView::Adjust);
         setMovement(QListView::Static);
-        setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        setFixedHeight(52);
+        setMinimumHeight(52);
         setSpacing(4);
+    }
+
+    void updateWrappedHeight()
+    {
+        if (!model() || model()->rowCount() == 0 || viewport()->width() <= 0)
+            return;
+
+        const int availableWidth = viewport()->width();
+        int rows = 1;
+        int currentWidth = 0;
+        int rowHeight = 32;
+        for (int row = 0; row < model()->rowCount(); ++row) {
+            const auto itemSize = sizeHintForIndex(model()->index(row, 0));
+            const int itemWidth = itemSize.width() + spacing();
+            if (currentWidth > 0 && currentWidth + itemWidth > availableWidth) {
+                ++rows;
+                currentWidth = 0;
+            }
+            currentWidth += itemWidth;
+            rowHeight = qMax(rowHeight, itemSize.height());
+        }
+        setFixedHeight(rows * rowHeight + 2 * frameWidth());
+        updateGeometry();
     }
 
     virtual QSize sizeHint() const
     {
-        return QSize(360, 52);
+        return QSize(360, qMax(52, height()));
     }
 
+   protected:
+    void resizeEvent(QResizeEvent* event) override
+    {
+        QListView::resizeEvent(event);
+        updateWrappedHeight();
+    }
+
+   public:
     virtual bool eventFilter(QObject* obj, QEvent* event)
     {
         if (obj == verticalScrollBar() && (event->type() == QEvent::Show || event->type() == QEvent::Hide))

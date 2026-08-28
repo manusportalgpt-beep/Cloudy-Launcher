@@ -105,12 +105,12 @@ PageContainer::PageContainer(BasePageProvider* pageProvider, QString defaultId, 
 
     m_proxyModel->setSourceModel(m_model);
     m_proxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
-
     m_pageList->setIconSize(QSize(pageIconSize, pageIconSize));
     m_pageList->setSelectionMode(QAbstractItemView::SingleSelection);
     m_pageList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     m_pageList->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
     m_pageList->setModel(m_proxyModel);
+    static_cast<PageView*>(m_pageList)->updateWrappedHeight();
     connect(m_pageList->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &PageContainer::currentChanged);
     m_pageStack->setStackingMode(QStackedLayout::StackOne);
     m_pageList->setFocus();
