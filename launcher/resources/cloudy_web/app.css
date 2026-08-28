@@ -516,3 +516,33 @@ html[data-weather-theme="snow"][data-snow-variant="light"] .welcome-shell, html[
 .onboarding-footer .action-button:disabled { opacity: .42; cursor: not-allowed; transform: none; }
 html[data-weather-theme="snow"][data-snow-variant="light"] .security-card, html[data-weather-theme="snow"][data-snow-variant="light"] .security-list > div, html[data-weather-theme="snow"][data-snow-variant="light"] .security-consent { background: rgba(255,255,255,.88); }
 @media (max-width: 760px) { .security-list { grid-template-columns: 1fr; } }
+
+/* Cloudy onboarding steps 06–10 */
+.onboarding-stepper { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-auto-rows: minmax(46px, auto); }
+.instance-icon-preview-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+.instance-icon-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-soft); text-align: center; }
+.instance-icon-preview strong { font-size: 10px; }
+.instance-icon-preview small { color: var(--muted); font-size: 9px; }
+.preview-instance-icon { display: grid; place-items: center; width: 54px; height: 54px; border: 1px solid var(--line-strong); border-radius: 15px; color: var(--white); font-size: 20px; font-weight: 700; background: linear-gradient(145deg, #344b70, #101c31); box-shadow: 0 10px 22px rgba(0,0,0,.22); }
+.preview-fabric { background: linear-gradient(145deg, #4d8d91, #172b3c); }
+.preview-quilt { background: linear-gradient(145deg, #7b6aab, #20223e); }
+.preview-forge { background: linear-gradient(145deg, #9b714e, #30251e); }
+.api-key-card, .project-link-card { display: flex; align-items: center; gap: 14px; margin-top: 20px; padding: 16px; border: 1px solid var(--line-strong); border-radius: 14px; background: rgba(24,42,68,.72); color: var(--text); text-decoration: none; }
+.api-key-card strong, .project-link-card strong { display: block; font-size: 13px; }
+.api-key-card small, .project-link-card small { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; }
+.api-key-card a { color: var(--white); text-decoration: underline; }
+.provider-mark, .github-mark { display: grid; place-items: center; flex: 0 0 38px; width: 38px; height: 38px; border: 1px solid var(--line-strong); border-radius: 11px; color: var(--white); font-size: 11px; font-weight: 700; }
+.provider-curseforge { background: linear-gradient(145deg, #e4a735, #9f5e19); }
+.github-mark { background: #171b24; }
+.external-arrow { margin-left: auto; color: var(--muted); font-size: 18px; }
+.project-link-card:hover { border-color: var(--line-strong); background: var(--surface-2); }
+.form-label { display: block; margin-top: 18px; margin-bottom: 7px; color: var(--muted); font-size: 10px; }
+.api-key-input { width: 100%; box-sizing: border-box; }
+.install-confirmation { text-align: center; }
+.install-confirmation h2 { max-width: 760px; margin-left: auto; margin-right: auto; }
+.confirmation-meter { height: 8px; margin: 26px auto 12px; max-width: 560px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.09); }
+.confirmation-meter span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #a8b8d2, #ffffff); transition: width .22s ease; }
+.confirmation-count { color: var(--muted); font-size: 11px; }
+.confirmation-button { min-width: 130px; margin-top: 8px; }
+@media (max-width: 760px) { .instance-icon-preview-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } .onboarding-stepper { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+html[data-weather-theme="snow"][data-snow-variant="light"] .instance-icon-preview, html[data-weather-theme="snow"][data-snow-variant="light"] .api-key-card, html[data-weather-theme="snow"][data-snow-variant="light"] .project-link-card { background: rgba(255,255,255,.88); }

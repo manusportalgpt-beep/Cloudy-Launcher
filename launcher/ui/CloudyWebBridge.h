@@ -87,6 +87,7 @@ class CloudyWebBridge : public QObject {
     void setSnowVariant(const QString& variant);
     void setSoundsEnabled(bool enabled);
     void setGlobalMemory(int megabytes);
+    void setCurseForgeApiKey(const QString& key);
     bool addOfflineAccount(const QString& username);
     void completeFirstRun();
 

@@ -378,6 +378,15 @@ void CloudyWebBridge::setGlobalMemory(int megabytes)
     emit stateChanged();
 }
 
+void CloudyWebBridge::setCurseForgeApiKey(const QString& key)
+{
+    if (!APPLICATION || !APPLICATION->settings())
+        return;
+    const QString normalized = key.trimmed().left(512);
+    APPLICATION->settings()->set(QStringLiteral("FlameKey"), normalized);
+    emit stateChanged();
+}
+
 bool CloudyWebBridge::addOfflineAccount(const QString& username)
 {
     if (!APPLICATION || !APPLICATION->accounts())
