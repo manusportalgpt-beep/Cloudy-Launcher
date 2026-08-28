@@ -33,8 +33,11 @@
 #include <QPainter>
 #include <QUrl>
 
+#include <QCryptographicHash>
 #include <QFrame>
+#include <QInputDialog>
 #include <QLabel>
+#include <QPushButton>
 #include <QVBoxLayout>
 
 #include "Application.h"
@@ -134,6 +137,36 @@ SkinManageDialog::SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct, bo
     contentsWidget->installEventFilter(this);
     contentsWidget->setModel(&m_list);
 
+    m_skinTabs = new QTabWidget(this);
+    m_skinTabs->setObjectName(QStringLiteral("cloudySkinTabs"));
+    m_ui->mainHlLayout->removeWidget(contentsWidget);
+    auto* libraryPage = new QWidget(m_skinTabs);
+    auto* libraryLayout = new QVBoxLayout(libraryPage);
+    libraryLayout->setContentsMargins(0, 0, 0, 0);
+    libraryLayout->addWidget(contentsWidget);
+    m_skinTabs->addTab(libraryPage, tr("Skin library"));
+
+    auto* presetsPage = new QWidget(m_skinTabs);
+    auto* presetsLayout = new QVBoxLayout(presetsPage);
+    presetsLayout->setContentsMargins(0, 0, 0, 0);
+    m_presetList = new QListWidget(presetsPage);
+    m_presetList->setObjectName(QStringLiteral("cloudySkinPresets"));
+    m_presetList->setSelectionMode(QAbstractItemView::SingleSelection);
+    auto* presetsButtons = new QHBoxLayout();
+    auto* savePresetButton = new QPushButton(tr("Save current preset"), presetsPage);
+    auto* deletePresetButton = new QPushButton(tr("Delete preset"), presetsPage);
+    presetsButtons->addWidget(savePresetButton);
+    presetsButtons->addWidget(deletePresetButton);
+    presetsButtons->addStretch(1);
+    presetsLayout->addWidget(m_presetList);
+    presetsLayout->addLayout(presetsButtons);
+    m_skinTabs->addTab(presetsPage, tr("Presets (0/8)"));
+    m_ui->mainHlLayout->addWidget(m_skinTabs);
+    connect(savePresetButton, &QPushButton::clicked, this, &SkinManageDialog::savePreset);
+    connect(deletePresetButton, &QPushButton::clicked, this, &SkinManageDialog::deletePreset);
+    connect(m_presetList, &QListWidget::itemDoubleClicked, this, &SkinManageDialog::loadPreset);
+    setupPresets();
+
     connect(contentsWidget, &QAbstractItemView::doubleClicked, this, &SkinManageDialog::activated);
 
     connect(contentsWidget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &SkinManageDialog::selectionChanged);
@@ -165,6 +198,100 @@ SkinManageDialog::~SkinManageDialog()
     if (m_skinPreview) {
         delete m_skinPreview;
     }
+}
+
+void SkinManageDialog::setupPresets()
+{
+    if (!m_presetList)
+        return;
+    m_presetList->clear();
+    QFile file(FS::PathCombine(m_list.getDir(), "presets.json"));
+    if (file.open(QIODevice::ReadOnly)) {
+        const auto doc = QJsonDocument::fromJson(file.readAll());
+        for (const auto& value : doc.object().value("presets").toArray()) {
+            const auto preset = value.toObject();
+            const auto path = preset.value("path").toString();
+            if (path.isEmpty() || !QFileInfo::exists(path))
+                continue;
+            auto* item = new QListWidgetItem(preset.value("name").toString(), m_presetList);
+            item->setData(Qt::UserRole, preset);
+        }
+    }
+    m_skinTabs->setTabText(1, tr("Presets (%1/8)").arg(m_presetList->count()));
+}
+
+void SkinManageDialog::savePreset()
+{
+    auto* skin = getSelectedSkin();
+    if (!skin || !m_presetList)
+        return;
+    QFile texture(skin->getPath());
+    if (!texture.open(QIODevice::ReadOnly))
+        return;
+    const auto hash = QCryptographicHash::hash(texture.readAll(), QCryptographicHash::Sha256).toHex();
+    for (int i = 0; i < m_presetList->count(); ++i) {
+        if (m_presetList->item(i)->data(Qt::UserRole).toJsonObject().value("hash").toString() == hash) {
+            m_presetList->setCurrentRow(i);
+            return;
+        }
+    }
+    if (m_presetList->count() >= 8)
+        return;
+    bool ok = false;
+    const auto name = QInputDialog::getText(this, tr("Preset name"), tr("Name:"), QLineEdit::Normal, skin->name(), &ok);
+    if (!ok || name.trimmed().isEmpty())
+        return;
+    QJsonObject preset;
+    preset["name"] = name.trimmed();
+    preset["path"] = skin->getPath();
+    preset["hash"] = QString::fromUtf8(hash);
+    preset["capeId"] = skin->getCapeId();
+    preset["model"] = skin->getModelString();
+    auto* item = new QListWidgetItem(name.trimmed(), m_presetList);
+    item->setData(Qt::UserRole, preset);
+    QJsonArray presets;
+    for (int i = 0; i < m_presetList->count(); ++i)
+        presets.append(m_presetList->item(i)->data(Qt::UserRole).toJsonObject());
+    QFile out(FS::PathCombine(m_list.getDir(), "presets.json"));
+    if (out.open(QIODevice::WriteOnly | QIODevice::Truncate))
+        out.write(QJsonDocument(QJsonObject{{"presets", presets}}).toJson(QJsonDocument::Indented));
+    m_skinTabs->setTabText(1, tr("Presets (%1/8)").arg(m_presetList->count()));
+}
+
+void SkinManageDialog::deletePreset()
+{
+    if (!m_presetList || !m_presetList->currentItem())
+        return;
+    delete m_presetList->takeItem(m_presetList->currentRow());
+    QJsonArray presets;
+    for (int i = 0; i < m_presetList->count(); ++i)
+        presets.append(m_presetList->item(i)->data(Qt::UserRole).toJsonObject());
+    QFile out(FS::PathCombine(m_list.getDir(), "presets.json"));
+    if (out.open(QIODevice::WriteOnly | QIODevice::Truncate))
+        out.write(QJsonDocument(QJsonObject{{"presets", presets}}).toJson(QJsonDocument::Indented));
+    m_skinTabs->setTabText(1, tr("Presets (%1/8)").arg(m_presetList->count()));
+}
+
+void SkinManageDialog::loadPreset(QListWidgetItem* item)
+{
+    if (!item)
+        return;
+    const auto preset = item->data(Qt::UserRole).toJsonObject();
+    const auto path = preset.value("path").toString();
+    auto* skin = m_list.skin(QFileInfo(path).fileName());
+    if (!skin)
+        skin = m_list.skin(QFileInfo(path).completeBaseName());
+    if (!skin)
+        return;
+    m_selectedSkinKey = skin->name();
+    const auto skinIndex = m_list.getSkinIndex(m_selectedSkinKey);
+    if (skinIndex < 0)
+        return;
+    m_ui->listView->setCurrentIndex(m_list.index(skinIndex));
+    skin->setCapeId(preset.value("capeId").toString());
+    skin->setModel(preset.value("model").toString().toUpper() == "SLIM" ? SkinModel::SLIM : SkinModel::CLASSIC);
+    if (m_skinPreview)
+        m_skinPreview->updateScene(skin);
 }
 
 void SkinManageDialog::activated(QModelIndex index)

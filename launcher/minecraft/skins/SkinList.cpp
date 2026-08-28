@@ -18,7 +18,9 @@
 
 #include "SkinList.h"
 
+#include <QCryptographicHash>
 #include <QFileInfo>
+#include <QImage>
 #include <QMimeData>
 
 #include "FileSystem.h"
@@ -299,12 +301,29 @@ QString SkinList::installSkin(const QString& file, const QString& name)
         return tr("Not a file.");
     if (!fileinfo.isReadable())
         return tr("File is not readable.");
-    if (fileinfo.suffix() != "png" && !SkinModel(fileinfo.absoluteFilePath()).isValid())
-        return tr("Skin images must be 64x64 or 64x32 pixel PNG files.");
 
-    QString target = getUniqueFile(m_dir.absolutePath(), name.isEmpty() ? fileinfo.fileName() : name);
+    QImage image;
+    if (!image.load(file) || (image.size() != QSize(64, 64) && image.size() != QSize(64, 32)))
+        return tr("Skin images must be 64x64 or 64x32 pixels.");
+    image = image.convertToFormat(QImage::Format_RGBA8888);
+    const auto sourceHash = QCryptographicHash::hash(QByteArray(reinterpret_cast<const char*>(image.constBits()), image.sizeInBytes()),
+                                                     QCryptographicHash::Sha256);
+    for (const auto& existing : m_skinList) {
+        QImage existingImage(existing.getPath());
+        if (!existingImage.isNull()) {
+            existingImage = existingImage.convertToFormat(QImage::Format_RGBA8888);
+            const auto existingHash = QCryptographicHash::hash(
+                QByteArray(reinterpret_cast<const char*>(existingImage.constBits()), existingImage.sizeInBytes()),
+                QCryptographicHash::Sha256);
+            if (existingHash == sourceHash)
+                return {};
+        }
+    }
 
-    return QFile::copy(file, target) ? "" : tr("Unable to copy file");
+    QString target = getUniqueFile(m_dir.absolutePath(), name.isEmpty() ? fileinfo.completeBaseName() + ".png" : name);
+    if (target.isEmpty() || !image.save(target, "PNG"))
+        return tr("Unable to save skin texture");
+    return {};
 }
 
 int SkinList::getSkinIndex(const QString& key) const
