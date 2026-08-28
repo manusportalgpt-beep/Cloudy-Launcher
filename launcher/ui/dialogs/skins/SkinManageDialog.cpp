@@ -38,6 +38,7 @@
 #include <QInputDialog>
 #include <QLabel>
 #include <QPushButton>
+#include <QSignalBlocker>
 #include <QVBoxLayout>
 
 #include "Application.h"
@@ -148,6 +149,10 @@ SkinManageDialog::SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct, bo
     dropHint->setAlignment(Qt::AlignCenter);
     dropHint->setMinimumHeight(42);
     libraryLayout->addWidget(dropHint);
+    m_selectedLabel = new QLabel(tr("Selected: none"), libraryPage);
+    m_selectedLabel->setObjectName(QStringLiteral("cloudySelectedSkin"));
+    m_selectedLabel->setAlignment(Qt::AlignCenter);
+    libraryLayout->addWidget(m_selectedLabel);
     libraryLayout->addWidget(contentsWidget);
     m_skinTabs->addTab(libraryPage, tr("Skin library"));
 
@@ -173,6 +178,7 @@ SkinManageDialog::SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct, bo
     connect(renamePresetButton, &QPushButton::clicked, this, &SkinManageDialog::renamePreset);
     connect(deletePresetButton, &QPushButton::clicked, this, &SkinManageDialog::deletePreset);
     connect(m_presetList, &QListWidget::itemDoubleClicked, this, &SkinManageDialog::loadPreset);
+    connect(m_skinTabs, &QTabWidget::currentChanged, this, [this](int) { restoreSelectedSkin(); });
     setupPresets();
 
     connect(contentsWidget, &QAbstractItemView::doubleClicked, this, &SkinManageDialog::activated);
@@ -188,7 +194,7 @@ SkinManageDialog::SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct, bo
 
     setupCapes();
 
-    m_ui->listView->setCurrentIndex(m_list.index(m_list.getSelectedAccountSkin()));
+    restoreSelectedSkin();
 
     m_ui->buttonBox->button(QDialogButtonBox::Cancel)->setText(tr("Cancel"));
     m_ui->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("OK"));
@@ -323,9 +329,36 @@ void SkinManageDialog::loadPreset(QListWidgetItem* item)
         m_skinPreview->updateScene(skin);
 }
 
+void SkinManageDialog::restoreSelectedSkin()
+{
+    if (!m_ui || !m_ui->listView || !m_ui->listView->selectionModel())
+        return;
+
+    int skinIndex = m_list.getSkinIndex(m_selectedSkinKey);
+    if (skinIndex < 0)
+        skinIndex = m_list.getSelectedAccountSkin();
+    if (skinIndex < 0 || skinIndex >= m_list.rowCount()) {
+        if (m_selectedLabel)
+            m_selectedLabel->setText(tr("Selected: none"));
+        return;
+    }
+
+    const auto modelIndex = m_list.index(skinIndex);
+    m_selectedSkinKey = modelIndex.data(Qt::UserRole).toString();
+    {
+        const QSignalBlocker blocker(m_ui->listView->selectionModel());
+        m_ui->listView->setCurrentIndex(modelIndex);
+        m_ui->listView->selectionModel()->select(modelIndex, QItemSelectionModel::ClearAndSelect);
+    }
+    if (m_selectedLabel)
+        m_selectedLabel->setText(tr("Selected: %1").arg(m_selectedSkinKey));
+    selectionChanged(QItemSelection(modelIndex, modelIndex), {});
+}
+
 void SkinManageDialog::activated(QModelIndex index)
 {
     m_selectedSkinKey = index.data(Qt::UserRole).toString();
+    restoreSelectedSkin();
     accept();
 }
 
@@ -338,6 +371,8 @@ void SkinManageDialog::selectionChanged(QItemSelection selected, [[maybe_unused]
     if (key.isEmpty())
         return;
     m_selectedSkinKey = key;
+    if (m_selectedLabel)
+        m_selectedLabel->setText(tr("Selected: %1").arg(m_selectedSkinKey));
     auto skin = getSelectedSkin();
     if (!skin)
         return;

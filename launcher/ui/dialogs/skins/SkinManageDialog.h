@@ -67,6 +67,7 @@ class SkinManageDialog : public QDialog, public SkinProvider {
     void deletePreset();
     void renamePreset();
     void loadPreset(QListWidgetItem* item);
+    void restoreSelectedSkin();
 
    private:
     MinecraftAccountPtr m_acct;
@@ -78,6 +79,7 @@ class SkinManageDialog : public QDialog, public SkinProvider {
     QHash<QString, int> m_capesIdx;
     SkinOpenGLWindow* m_skinPreview = nullptr;
     QLabel* m_skinPreviewLabel = nullptr;
+    QLabel* m_selectedLabel = nullptr;
     QTabWidget* m_skinTabs = nullptr;
     QListWidget* m_presetList = nullptr;
 };
