@@ -76,9 +76,13 @@ def build_document():
         )
 
     # Inline CSS and JS into the document.
+    state_js = read_resource("cloudy-state.js")
     html = html.replace(b"<!-- CLOUDY_CSS -->", b"<style>" + css + b"</style>")
     html = html.replace(
         b"<!-- CLOUDY_WEBCHANNEL_JS -->", b"<script>" + channel + b"</script>"
+    )
+    html = html.replace(
+        b"<!-- CLOUDY_STATE_JS -->", b"<script>" + state_js + b"</script>"
     )
     html = html.replace(b"<!-- CLOUDY_APP_JS -->", b"<script>" + app + b"</script>")
 

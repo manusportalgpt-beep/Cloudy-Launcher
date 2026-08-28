@@ -14,6 +14,7 @@
   let bridge = null;
   let route = "home";
   let selectedInstanceOverride = "";
+  let lastRoute = null;
   let onboardingStep = 1;
   let onboardingAuth = "";
   let onboardingNickname = "";
@@ -126,6 +127,21 @@
     if (bridge && typeof bridge[method] === "function") {
       bridge[method](...args);
     }
+  };
+
+  const showLaunchOverlay = (name) => {
+    const ru = uiLanguage() === "ru";
+    const existing = document.querySelector(".launch-overlay");
+    if (existing) existing.remove();
+    const overlay = document.createElement("div");
+    overlay.className = "launch-overlay";
+    overlay.innerHTML = `<div class="launch-card"><div class="launch-spinner"></div><div class="launch-text"><strong>${ru ? "Запуск " : "Launching "}${escapeHtml(name)}</strong><small>${ru ? "Подготовка Minecraft…" : "Preparing Minecraft…"}</small></div><div class="launch-progress-bar"><span></span></div></div>`;
+    document.querySelector(".cloudy-app").append(overlay);
+    requestAnimationFrame(() => overlay.classList.add("is-visible"));
+    setTimeout(() => {
+      overlay.classList.remove("is-visible");
+      setTimeout(() => overlay.remove(), 300);
+    }, 3500);
   };
 
   const state = () => {
@@ -255,7 +271,7 @@
           <small>${escapeHtml(instanceLabel(item))}</small>
           <span class="instance-status"><span class="status-dot"></span>${item.running ? "Playing" : "Available"}</span>
           <div class="card-actions">
-            ${item.running ? shellButton("Open", "launch", "quiet", item.id) : shellButton("Launch", "launch", "primary", item.id)}
+            ${item.running ? shellButton("Stop", "stop-instance", "quiet", item.id) : shellButton("Launch", "launch", "primary", item.id)}
             <button class="action-button quiet" data-action="open-mods" data-instance-id="${escapeHtml(item.id)}">Mods</button>
             <button class="action-button quiet" data-action="open-files" data-instance-id="${escapeHtml(item.id)}">Files</button>
           </div>
@@ -296,30 +312,122 @@
   };
 
   const renderNew = () => {
-    const providers = [
-      ["Custom", "Local version or imported pack", "custom"],
-      ["Modrinth", "Modpacks, versions and projects", "modrinth"],
-      ["CurseForge", "Modpacks and manifests", "curseforge"],
-      ["FTB", "Official FTB packs and versions", "ftb"],
-      ["Technic", "Technic platform packs", "technic"],
-      ["Import", "ZIP, MRPACK or local folder", "import"],
+    const ru = uiLanguage() === "ru";
+    const versions = ["1.21.4", "1.21.3", "1.21.1", "1.21", "1.20.6", "1.20.4", "1.20.1", "1.19.4", "1.19.2", "1.18.2", "1.16.5", "1.12.2"];
+    const loaders = [
+      ["vanilla", "Vanilla", ru ? "Чистый Minecraft" : "Pure Minecraft"],
+      ["fabric", "Fabric", ru ? "Лёгкий, быстрые обновления" : "Lightweight, fast updates"],
+      ["forge", "Forge", ru ? "Большая экосистема модов" : "Largest mod ecosystem"],
+      ["quilt", "Quilt", ru ? "Совместим с Fabric" : "Fabric-compatible"],
     ];
     workspace.innerHTML = `
       <section class="page">
-        <div class="page-heading"><div><p class="eyebrow">Instance builder</p><h1>Create an instance</h1><p class="lead">Choose a source, version and loader. The complete installer remains powered by Cloudy’s native task pipeline.</p></div>${shellButton("Back to library", "home", "quiet")}</div>
-        <div class="builder-stepper" aria-label="Instance creation steps"><div class="builder-step is-current"><span>01</span><strong>Source</strong><small>Choose a provider</small></div><div class="builder-step"><span>02</span><strong>Version</strong><small>Release or snapshot</small></div><div class="builder-step"><span>03</span><strong>Loader</strong><small>Forge, Fabric or vanilla</small></div><div class="builder-step"><span>04</span><strong>Review</strong><small>Name and install</small></div></div><div class="flow-layout">
-          <div class="feature-panel"><div class="tools-row"><h2>Choose a source</h2><span class="subtle">All providers</span></div><div class="builder-selection"><div><p class="eyebrow">Starting point</p><strong>Pick where the pack comes from</strong><span>Cloudy keeps the provider choice visible while the native builder handles the real install.</span></div><span class="selection-badge">Step 1 of 4</span></div><div class="provider-list">${providers.map(([name, detail, icon], index) => `<button class="provider-card ${index === 0 ? "is-selected" : ""}" data-provider="${icon}" data-action="open-new" aria-label="Open ${name} in the native builder"><span class="provider-logo provider-${icon}"><img src="${providerIconSources[icon]}" alt=""></span><span><strong>${name}</strong><small>${detail}</small></span></button>`).join("")}</div><div class="selection-cloud-anchor"><svg class="cloud-anchor-icon" viewBox="0 0 96 48" aria-hidden="true"><path d="M18 38h55c9 0 16-6 16-14 0-7-6-13-14-14C72 4 65 0 57 0c-8 0-15 5-17 12C30 11 22 16 22 23c-7 0-12 4-12 8 0 4 3 7 8 7Z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 38h55" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg><span>Cloudy keeps your source, version and loader choice together.</span></div><div class="native-handoff"><span>Open the complete version, loader and installer flow.</span>${shellButton("Open builder", "open-new", "primary")}</div></div>
-          <aside class="side-panel"><p class="eyebrow">Build preview</p><h2>Ready for the native flow</h2><ol class="build-steps"><li><span>01</span><div><strong>Source</strong><small>Provider or local import</small></div></li><li><span>02</span><div><strong>Version</strong><small>Release, snapshot or beta</small></div></li><li><span>03</span><div><strong>Loader</strong><small>Compatible mod loader</small></div></li><li><span>04</span><div><strong>Install</strong><small>Name, icon and task progress</small></div></li></ol><div class="callout">The next step opens Cloudy’s verified native builder. Microsoft OAuth and existing account handling remain native and secure.</div></aside>
+        <div class="page-heading"><div><p class="eyebrow">${ru ? "Создание сборки" : "Instance builder"}</p><h1>${ru ? "Создать сборку" : "Create an instance"}</h1><p class="lead">${ru ? "Выберите версию и загрузчик, назовите сборку и нажмите «Создать»." : "Pick a version and loader, name your instance, and click Create."}</div>${shellButton(ru ? "В библиотеку" : "Back to library", "home", "quiet")}</div>
+        <div class="builder-form-layout">
+          <div class="feature-panel builder-form">
+            <div class="form-row">
+              <label for="new-instance-name">${ru ? "Название сборки" : "Instance name"}</label>
+              <input class="form-input" id="new-instance-name" type="text" placeholder="${ru ? "Моя сборка" : "My Instance"}" autocomplete="off">
+            </div>
+            <div class="form-row">
+              <label for="new-instance-version">${ru ? "Версия Minecraft" : "Minecraft version"}</label>
+              <select class="form-input" id="new-instance-version">${versions.map((v) => `<option value="${v}">${v}</option>`).join("")}</select>
+            </div>
+            <div class="form-row">
+              <label>${ru ? "Загрузчик модов" : "Mod loader"}</label>
+              <div class="loader-choice-grid">${loaders.map(([id, name, desc], i) => `<button class="loader-choice ${i === 0 ? "is-selected" : ""}" data-loader="${id}" type="button"><strong>${name}</strong><small>${desc}</small></button>`).join("")}</div>
+            </div>
+            <div class="builder-form-actions"><button class="action-button primary" data-action="create-instance" type="button">${ru ? "Создать сборку" : "Create instance"}</button></div>
+          </div>
+          <aside class="side-panel"><p class="eyebrow">${ru ? "Подсказка" : "Tip"}</p><h2>${ru ? "Сборка появится в библиотеке" : "Appears in your Library"}</h2><p class="subtle">${ru ? "После создания вы сможете запускать сборку, устанавливать моды и открывать файлы." : "After creating, launch it, install mods, and browse files."}</p><div class="callout">${ru ? "Cloudy сохраняет сборки локально. Все данные остаются на вашем устройстве." : "Cloudy stores instances locally. All data stays on your device."}</div></aside>
         </div>
       </section>`;
+    workspace.querySelectorAll(".loader-choice").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        workspace.querySelectorAll(".loader-choice").forEach((b) => b.classList.remove("is-selected"));
+        btn.classList.add("is-selected");
+      });
+    });
+    document.getElementById("new-instance-name")?.focus();
+  };
+
+  const formatDownloads = (n) => {
+    if (!n) return "0";
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + "K";
+    return String(n);
   };
 
   const renderMods = ({ instances, selectedInstanceId }) => {
     const selected = instances.find((item) => item.id === selectedInstanceId) || instances[0];
+    const installedMods = selected?.mods || [];
+    const ru = uiLanguage() === "ru";
     workspace.innerHTML = `
-      <section class="page"><div class="page-heading"><div><p class="eyebrow">Resource workspace</p><h1>Mods & resources</h1><p class="lead">Search and install mods through the existing Modrinth, CurseForge and local resource workflows.</p></div>${shellButton("Back to library", "home", "quiet")}</div>
-      <div class="hero-strip"><div class="hero-panel"><p class="eyebrow">Selected instance</p><h2>${selected ? escapeHtml(selected.name) : "No instance selected"}</h2><p class="lead">Select an instance from Library, then open its real mod page with filters, versions and install tasks.</p>${selected ? shellButton("Open mod installer", "open-mod-installer", "primary", selected.id) : shellButton("Choose an instance", "home", "quiet")}</div><div class="side-panel"><span>Sources</span><strong>3+</strong><span>Modrinth · CurseForge · local files</span></div></div>
-      <div class="flow-layout"><div class="feature-panel"><div class="tools-row"><h2>Install source</h2><span class="subtle">Task-backed</span></div><div class="provider-list"><button class="provider-card" data-action="open-mod-installer" data-resource-type="mods"><span class="provider-logo provider-modrinth"><img src="data:image/png;base64,CLOUDY_PROVIDER_MODRINTH" alt=""></span><span><strong>Modrinth</strong><small>Search projects and versions</small></span></button><button class="provider-card" data-action="open-mod-installer" data-resource-type="mods:curseforge"><span class="provider-logo provider-curseforge"><img src="data:image/png;base64,CLOUDY_PROVIDER_CURSEFORGE" alt=""></span><span><strong>CurseForge</strong><small>Official API key required for search</small></span></button></div></div><aside class="side-panel"><p class="eyebrow">Provider details</p><h2>Authors stay linked</h2><p class="subtle">Open the native resource workspace for real project metadata, clickable Modrinth and CurseForge author links, versions and install tasks.</p><div class="callout">Author pages, project links and provider extras are loaded from the existing native models. Cloudy does not invent author profiles or expose provider credentials.</div></aside></div></section>`;
+      <section class="page"><div class="page-heading"><div><p class="eyebrow">Resource workspace</p><h1>${ru ? "Моды и ресурсы" : "Mods & resources"}</h1><p class="lead">${ru ? "Ищите моды на Modrinth и устанавливайте их в выбранную сборку." : "Search mods on Modrinth and install them into your selected instance."}</div>${shellButton(ru ? "В библиотеку" : "Back to library", "home", "quiet")}</div>
+      <div class="mods-layout">
+        <div class="mods-main">
+          <div class="mods-search-bar">
+            <input class="search-box mods-search-input" id="mod-search" type="search" placeholder="${ru ? "Поиск модов на Modrinth…" : "Search Modrinth mods…"}" aria-label="Search mods" autocomplete="off">
+            <span class="mods-source-badge">Modrinth API</span>
+          </div>
+          <div class="mod-results" id="mod-results">
+            <div class="mod-results-placeholder">${ru ? "Начните вводить для поиска модов" : "Start typing to search for mods"}</div>
+          </div>
+        </div>
+        <aside class="mods-sidebar">
+          <p class="eyebrow">${ru ? "Выбранная сборка" : "Selected instance"}</p>
+          <h2>${selected ? escapeHtml(selected.name) : (ru ? "Не выбрана" : "None selected")}</h2>
+          ${selected ? `<small class="mods-instance-meta">${escapeHtml(selected.version)} · ${escapeHtml(selected.loader)}</small>` : ""}
+          <div class="mods-installed-divider"></div>
+          <p class="eyebrow">${ru ? "Установленные моды" : "Installed mods"} (${installedMods.length})</p>
+          <div class="installed-mods-list" id="installed-mods-list">
+            ${installedMods.length ? installedMods.map((m) => `<div class="installed-mod-item"><span class="installed-mod-name">${escapeHtml(m.name)}</span><button class="installed-mod-remove" data-action="remove-mod" data-mod-id="${escapeHtml(m.id)}" title="${ru ? "Удалить" : "Remove"}">×</button></div>`).join("") : `<p class="mods-empty-note">${ru ? "Пока нет установленных модов" : "No mods installed yet"}</p>`}
+          </div>
+        </aside>
+      </div></section>`;
+
+    const searchInput = document.getElementById("mod-search");
+    const resultsContainer = document.getElementById("mod-results");
+    let searchTimer = null;
+
+    const renderResults = (hits) => {
+      if (!hits?.length) {
+        resultsContainer.innerHTML = `<div class="mod-results-placeholder">${ru ? "Ничего не найдено" : "No mods found"}</div>`;
+        return;
+      }
+      resultsContainer.innerHTML = hits.map((hit) => {
+        const isInstalled = installedMods.some((m) => m.id === hit.project_id);
+        return `<div class="mod-card ${isInstalled ? "is-installed" : ""}">
+          <img class="mod-card-icon" src="${escapeHtml(hit.icon_url || "")}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+          <div class="mod-card-body">
+            <strong>${escapeHtml(hit.title)}</strong>
+            <small>${escapeHtml((hit.description || "").slice(0, 120))}</small>
+            <div class="mod-card-meta"><span>⬇ ${formatDownloads(hit.downloads)}</span>${hit.versions?.length ? `<span>· ${escapeHtml(hit.versions[0])}</span>` : ""}</div>
+          </div>
+          <button class="action-button ${isInstalled ? "quiet" : "primary"} mod-install-btn" data-action="install-mod" data-mod-id="${escapeHtml(hit.project_id)}" data-mod-name="${escapeHtml(hit.title)}" data-mod-icon="${escapeHtml(hit.icon_url || "")}" ${isInstalled ? "disabled" : ""}>${isInstalled ? "✓" : (ru ? "Установить" : "Install")}</button>
+        </div>`;
+      }).join("");
+    };
+
+    searchInput?.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      const query = searchInput.value.trim();
+      if (!query) {
+        resultsContainer.innerHTML = `<div class="mod-results-placeholder">${ru ? "Начните вводить для поиска модов" : "Start typing to search for mods"}</div>`;
+        return;
+      }
+      resultsContainer.innerHTML = `<div class="mod-results-loading"><span class="mini-spinner"></span>${ru ? "Поиск…" : "Searching…"}</div>`;
+      searchTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(`https://api.modrinth.com/v2/search?query=${encodeURIComponent(query)}&facets=[["project_type:mod"]]&limit=24`);
+          const data = await res.json();
+          renderResults(data.hits);
+        } catch (_) {
+          resultsContainer.innerHTML = `<div class="mod-results-placeholder">${ru ? "Ошибка поиска. Проверьте соединение." : "Search failed. Check your connection."}</div>`;
+        }
+      }, 350);
+    });
+    searchInput?.focus();
   };
 
   const renderFiles = ({ instances, selectedInstanceId }) => {
@@ -337,7 +445,7 @@
     }
     const status = selected.running ? "Playing" : "Ready to play";
     const icon = selected.iconData ? `<img class="instance-detail-icon" src="${escapeHtml(selected.iconData)}" alt="${escapeHtml(selected.name)} icon">` : `<span class="instance-detail-placeholder">${escapeHtml((selected.name || "C").slice(0, 1).toUpperCase())}</span>`;
-    workspace.innerHTML = `<section class="page instance-detail-page"><div class="page-heading"><div><p class="eyebrow">Instance workspace</p><h1>${escapeHtml(selected.name)}</h1><p class="lead">A connected overview for this Minecraft build. Launching and resource changes remain handled by the native task pipeline.</p></div>${shellButton("Back to library", "home", "quiet")}</div><div class="instance-detail-hero"><div class="instance-detail-identity"><div class="instance-detail-art">${icon}</div><div><span class="status-chip"><span class="status-dot"></span>${status}</span><h2>${escapeHtml(selected.name)}</h2><p class="subtle">${escapeHtml(selected.managed ? `${selected.managedType || "Managed"} · ${selected.managedVersion || "version"}` : "Local Minecraft instance")}</p></div></div><div class="instance-detail-actions">${shellButton(selected.running ? "Open" : "Launch", "launch", "primary", selected.id)}${shellButton("Mods", "open-mod-installer", "quiet", selected.id)}${shellButton("Files", "open-files", "quiet", selected.id)}</div></div><div class="detail-grid"><div class="feature-panel"><p class="eyebrow">Overview</p><h2>Build, inspect and play</h2><p class="subtle">Use the native instance page for version details, logs, screenshots, worlds and task progress.</p>${shellButton("Open native instance page", "open-native-instance", "quiet", selected.id)}</div><aside class="side-panel"><p class="eyebrow">Safe handoff</p><strong>Native workflow connected</strong><p class="subtle">Cloudy keeps account, file and installer permissions in the native layer.</p></aside></div></section>`;
+    workspace.innerHTML = `<section class="page instance-detail-page"><div class="page-heading"><div><p class="eyebrow">Instance workspace</p><h1>${escapeHtml(selected.name)}</h1><p class="lead">A connected overview for this Minecraft build. Launching and resource changes remain handled by the native task pipeline.</p></div>${shellButton("Back to library", "home", "quiet")}</div><div class="instance-detail-hero"><div class="instance-detail-identity"><div class="instance-detail-art">${icon}</div><div><span class="status-chip"><span class="status-dot"></span>${status}</span><h2>${escapeHtml(selected.name)}</h2><p class="subtle">${escapeHtml(selected.managed ? `${selected.managedType || "Managed"} · ${selected.managedVersion || "version"}` : "Local Minecraft instance")}</p></div></div><div class="instance-detail-actions">${shellButton(selected.running ? "Stop" : "Launch", selected.running ? "stop-instance" : "launch", "primary", selected.id)}${shellButton("Mods", "open-mod-installer", "quiet", selected.id)}${shellButton("Files", "open-files", "quiet", selected.id)}</div></div><div class="detail-grid"><div class="feature-panel"><p class="eyebrow">Overview</p><h2>Build, inspect and play</h2><p class="subtle">Use the native instance page for version details, logs, screenshots, worlds and task progress.</p>${shellButton("Open native instance page", "open-native-instance", "quiet", selected.id)}</div><aside class="side-panel"><p class="eyebrow">Safe handoff</p><strong>Native workflow connected</strong><p class="subtle">Cloudy keeps account, file and installer permissions in the native layer.</p></aside></div></section>`;
   };
 
   const renderAccounts = ({ account, hasAccount, accounts }) => {
@@ -403,6 +511,10 @@
     else if (route === "skins") renderSkins(currentState);
     else renderHome(currentState);
 
+    const routeChanged = route !== lastRoute;
+    lastRoute = route;
+    if (routeChanged) workspace.querySelector(".page")?.classList.add("animate-in");
+
     const activeAccount = currentState.accounts.find((item) => item.active) || currentState.accounts[0];
     const runningItems = currentState.instances.filter((item) => item.running);
     const running = runningItems.length;
@@ -435,6 +547,7 @@
       const nativeCard = nativeButton.closest("[data-instance-id]");
       const nativeId = nativeButton.dataset.instanceId || nativeCard?.dataset.instanceId || state().instances[0]?.id || "";
       const action = nativeButton.dataset.action;
+      if (nativeId) selectedInstanceOverride = nativeId;
       if (action === "open-mod-installer") {
         setRoute("mods");
         callNative("openModInstaller", nativeId, nativeButton.dataset.resourceType || "mods");
@@ -442,6 +555,7 @@
         setRoute("files");
         callNative("openInstancePage", nativeId, "files");
       } else {
+        setRoute("mods");
         callNative("openMods", nativeId);
       }
       event.preventDefault();
@@ -592,8 +706,57 @@
       if (action === "window-minimize") { callNative("minimizeWindow"); }
       if (action === "window-toggle-maximize") { callNative("toggleMaximizeWindow"); }
       if (action === "window-close") { callNative("closeWindow"); }
-      if (action === "launch") { callNative("launchInstance", id); }
+      if (action === "launch") {
+        const inst = state().instances.find((i) => i.id === id);
+        callNative("launchInstance", id);
+        if (inst) showLaunchOverlay(inst.name);
+      }
+      if (action === "stop-instance") { callNative("stopInstance", id); }
       if (action === "refresh") { callNative("refreshInstances"); }
+      if (action === "create-instance") {
+        const nameInput = document.getElementById("new-instance-name");
+        const versionSelect = document.getElementById("new-instance-version");
+        const loaderBtn = workspace.querySelector(".loader-choice.is-selected");
+        const name = nameInput?.value.trim() || (uiLanguage() === "ru" ? "Новая сборка" : "New Instance");
+        const version = versionSelect?.value || "1.21.4";
+        const loader = loaderBtn?.dataset.loader || "vanilla";
+        callNative("createInstance", name, version, loader);
+        setRoute("home");
+      }
+      if (action === "install-mod") {
+        const modId = actionButton.dataset.modId;
+        const modName = actionButton.dataset.modName;
+        const modIcon = actionButton.dataset.modIcon;
+        const targetId = selectedInstanceOverride || state().selectedInstanceId || state().instances[0]?.id;
+        if (targetId && modId) {
+          callNative("addMod", targetId, { id: modId, name: modName, icon: modIcon });
+          actionButton.textContent = "✓";
+          actionButton.disabled = true;
+          actionButton.classList.remove("primary");
+          actionButton.classList.add("quiet");
+          actionButton.closest(".mod-card")?.classList.add("is-installed");
+          const list = document.getElementById("installed-mods-list");
+          if (list) {
+            list.querySelector(".mods-empty-note")?.remove();
+            const item = document.createElement("div");
+            item.className = "installed-mod-item";
+            item.innerHTML = `<span class="installed-mod-name">${escapeHtml(modName)}</span><button class="installed-mod-remove" data-action="remove-mod" data-mod-id="${escapeHtml(modId)}" title="Remove">×</button>`;
+            list.prepend(item);
+          }
+        }
+      }
+      if (action === "remove-mod") {
+        const modId = actionButton.dataset.modId;
+        const targetId = selectedInstanceOverride || state().selectedInstanceId || state().instances[0]?.id;
+        if (targetId && modId) {
+          callNative("removeMod", targetId, modId);
+          actionButton.closest(".installed-mod-item")?.remove();
+          const list = document.getElementById("installed-mods-list");
+          if (list && !list.children.length) {
+            list.innerHTML = `<p class="mods-empty-note">${uiLanguage() === "ru" ? "Пока нет установленных модов" : "No mods installed yet"}</p>`;
+          }
+        }
+      }
       event.stopPropagation();
       return;
     }
@@ -657,6 +820,8 @@
       render();
     });
   } else {
+    bridge = window.CloudyMockBridge;
+    if (bridge?.stateChanged) bridge.stateChanged.connect(render);
     render();
   }
 })();

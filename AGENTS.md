@@ -17,11 +17,10 @@ single HTML document at runtime by substituting placeholders (`CLOUDY_CSS`,
 inlined CSS/JS and base64-encoded images, then loads it into a QWebEngineView.
 
 `scripts/serve_web.py` replicates that assembly and serves the result as a static
-page on port 3000. Without the native QWebChannel `bridge` object (guarded by
-`if (window.qt?.webChannelTransport && window.QWebChannel)` in app.js), the UI
-renders with its built-in default/empty state — the onboarding flow, navigation
-rail, and weather scene. This is exactly what the real app shows before any
-instance or account data exists.
+page on port 3000. `cloudy-state.js` provides a mock bridge (backed by localStorage)
+that seeds instances, accounts, and settings so the launcher is fully functional
+in the browser: instance creation, launch with progress overlay, Modrinth mod
+search/install, stop, and settings toggles all work without the native host.
 
 The served document is ~2 MB because all CSS, JS, and images are inlined.
 
@@ -44,9 +43,16 @@ curl -sf http://localhost:3000/ | grep -c "CLOUDY_"           # should be 0 (all
 
 ## Editing the web shell
 
-Edit files under `launcher/resources/cloudy_web/`. The serve script rebuilds the
-document on every process start, so restart the container to pick up changes:
+Edit files under `launcher/resources/cloudy_web/` (`index.html`, `app.css`,
+`app.js`, `cloudy-state.js`). The serve script rebuilds the document on every
+process start, so restart the container to pick up changes:
 `docker compose -f docker-compose.base44.yml restart web`.
+
+Key files:
+- `cloudy-state.js` — mock bridge with localStorage persistence (instances,
+  accounts, settings, mod management). Seeds 3 instances and 1 account.
+- `app.js` — UI logic, routing, event handling, Modrinth API search.
+- `app.css` — all styles including weather themes and component styles.
 
 ## Native build (not used for the preview)
 
