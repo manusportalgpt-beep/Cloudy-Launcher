@@ -39,6 +39,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QSignalBlocker>
+#include <QTimer>
 #include <QVBoxLayout>
 
 #include "Application.h"
@@ -74,6 +75,7 @@ SkinManageDialog::SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct, bo
     }
 
     m_ui->setupUi(this);
+    m_readOnlySkin = m_acct && m_acct->accountType() == AccountType::Offline;
     setObjectName(QStringLiteral("cloudyDialog"));
     m_ui->listView->setObjectName(QStringLiteral("cloudySkinLibrary"));
     m_ui->modelBox->setObjectName(QStringLiteral("cloudySection"));
@@ -198,11 +200,27 @@ SkinManageDialog::SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct, bo
 
     m_ui->buttonBox->button(QDialogButtonBox::Cancel)->setText(tr("Cancel"));
     m_ui->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("OK"));
+    if (m_readOnlySkin) {
+        m_ui->buttonBox->button(QDialogButtonBox::Ok)->hide();
+        m_ui->fileBtn->setEnabled(false);
+        m_ui->urlBtn->setEnabled(false);
+        m_ui->resetBtn->setEnabled(false);
+        m_ui->capeCombo->setEnabled(false);
+        m_ui->steveBtn->setEnabled(false);
+        m_ui->alexBtn->setEnabled(false);
+        m_ui->urlLine->setPlaceholderText(tr("Nickname skin is view-only"));
+    }
 
     if (m_skinPreview) {
         m_ui->skinLayout->insertWidget(0, QWidget::createWindowContainer(m_skinPreview, this));
     } else {
         m_ui->skinLayout->insertWidget(0, m_skinPreviewLabel);
+    }
+    if (m_readOnlySkin && m_acct && m_acct->accountData()->minecraftProfile.skin.data.isEmpty() && !m_acct->profileName().isEmpty()) {
+        QTimer::singleShot(0, this, [this] {
+            m_ui->urlLine->setText(m_acct->profileName());
+            on_userBtn_clicked();
+        });
     }
 }
 
@@ -229,6 +247,40 @@ void SkinManageDialog::setupPresets()
                 continue;
             auto* item = new QListWidgetItem(preset.value("name").toString(), m_presetList);
             item->setData(Qt::UserRole, preset);
+        }
+    }
+
+    const auto accountIndex = m_list.getSelectedAccountSkin();
+    if (accountIndex >= 0 && accountIndex < m_list.rowCount()) {
+        const auto* accountSkin = m_list.skin(m_list.data(m_list.index(accountIndex), Qt::UserRole).toString());
+        if (accountSkin) {
+            for (int i = m_presetList->count() - 1; i >= 0; --i) {
+                if (m_presetList->item(i)->data(Qt::UserRole).toJsonObject().value("accountSkin").toBool())
+                    delete m_presetList->takeItem(i);
+            }
+            QFile texture(accountSkin->getPath());
+            const auto hash = texture.open(QIODevice::ReadOnly)
+                                  ? QCryptographicHash::hash(texture.readAll(), QCryptographicHash::Sha256).toHex()
+                                  : QByteArray{};
+            QJsonObject preset;
+            preset["name"] = tr("Account skin");
+            preset["path"] = accountSkin->getPath();
+            preset["hash"] = QString::fromUtf8(hash);
+            preset["capeId"] = accountSkin->getCapeId();
+            preset["model"] = accountSkin->getModelString();
+            preset["accountSkin"] = true;
+            auto* item = new QListWidgetItem(tr("Account skin"));
+            item->setData(Qt::UserRole, preset);
+            item->setToolTip(tr("Skin loaded from the active account; this preset is maintained automatically."));
+            m_presetList->insertItem(0, item);
+            while (m_presetList->count() > 8)
+                delete m_presetList->takeItem(m_presetList->count() - 1);
+            QJsonArray presets;
+            for (int i = 0; i < m_presetList->count(); ++i)
+                presets.append(m_presetList->item(i)->data(Qt::UserRole).toJsonObject());
+            QFile out(FS::PathCombine(m_list.getDir(), "presets.json"));
+            if (out.open(QIODevice::WriteOnly | QIODevice::Truncate))
+                out.write(QJsonDocument(QJsonObject{{"presets", presets}}).toJson(QJsonDocument::Indented));
         }
     }
     m_skinTabs->setTabText(1, tr("Presets (%1/8)").arg(m_presetList->count()));
@@ -277,6 +329,8 @@ void SkinManageDialog::renamePreset()
     if (!m_presetList || !m_presetList->currentItem())
         return;
     auto* item = m_presetList->currentItem();
+    if (item->data(Qt::UserRole).toJsonObject().value("accountSkin").toBool())
+        return;
     bool ok = false;
     const auto name = QInputDialog::getText(this, tr("Rename preset"), tr("Name:"), QLineEdit::Normal, item->text(), &ok);
     if (!ok || name.trimmed().isEmpty())
@@ -296,6 +350,8 @@ void SkinManageDialog::renamePreset()
 void SkinManageDialog::deletePreset()
 {
     if (!m_presetList || !m_presetList->currentItem())
+        return;
+    if (m_presetList->currentItem()->data(Qt::UserRole).toJsonObject().value("accountSkin").toBool())
         return;
     delete m_presetList->takeItem(m_presetList->currentRow());
     QJsonArray presets;
@@ -359,7 +415,8 @@ void SkinManageDialog::activated(QModelIndex index)
 {
     m_selectedSkinKey = index.data(Qt::UserRole).toString();
     restoreSelectedSkin();
-    accept();
+    if (!m_readOnlySkin)
+        accept();
 }
 
 void SkinManageDialog::selectionChanged(QItemSelection selected, [[maybe_unused]] QItemSelection deselected)
@@ -524,6 +581,10 @@ void SkinManageDialog::on_steveBtn_toggled(bool checked)
 
 void SkinManageDialog::accept()
 {
+    if (m_readOnlySkin) {
+        reject();
+        return;
+    }
     auto skin = m_list.skin(m_selectedSkinKey);
     if (!skin) {
         reject();
@@ -791,6 +852,19 @@ void SkinManageDialog::on_userBtn_clicked()
         s.setCapeId(mcProfile.currentCape);
     }
     m_list.updateSkin(&s);
+    if (m_acct) {
+        auto& profile = m_acct->accountData()->minecraftProfile;
+        profile.id = mcProfile.id;
+        profile.name = mcProfile.name;
+        profile.skin = mcProfile.skin;
+        profile.skin.data = QFile(path).exists() ? [&path] {
+            QFile file(path);
+            return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray{};
+        }() : QByteArray{};
+        profile.validity = Validity::Certain;
+        emit m_acct->changed();
+    }
+    restoreSelectedSkin();
 }
 
 void SkinManageDialog::resizeEvent(QResizeEvent* event)

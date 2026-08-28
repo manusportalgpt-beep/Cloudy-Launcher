@@ -246,7 +246,8 @@ void AccountListPage::updateButtonStates()
     }
     ui->actionRemove->setEnabled(accountIsReady);
     ui->actionSetDefault->setEnabled(accountIsReady);
-    ui->actionManageSkins->setEnabled(accountIsReady && accountIsOnline);
+    // Nickname accounts can inspect their UUID skin, but Skin Studio keeps editing disabled for them.
+    ui->actionManageSkins->setEnabled(accountIsReady && (accountIsOnline || hasSelection));
     ui->actionRefresh->setEnabled(accountIsReady && accountIsOnline);
 
     if (m_accounts->defaultAccount().get() == nullptr) {

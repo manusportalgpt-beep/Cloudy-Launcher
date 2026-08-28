@@ -72,6 +72,7 @@ class SkinManageDialog : public QDialog, public SkinProvider {
    private:
     MinecraftAccountPtr m_acct;
     bool m_embedded = false;
+    bool m_readOnlySkin = false;
     Ui::SkinManageDialog* m_ui;
     SkinList m_list;
     QString m_selectedSkinKey;
