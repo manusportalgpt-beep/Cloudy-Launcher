@@ -65,6 +65,7 @@ class SkinManageDialog : public QDialog, public SkinProvider {
     void setupPresets();
     void savePreset();
     void deletePreset();
+    void renamePreset();
     void loadPreset(QListWidgetItem* item);
 
    private:

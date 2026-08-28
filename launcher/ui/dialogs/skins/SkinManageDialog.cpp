@@ -143,6 +143,11 @@ SkinManageDialog::SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct, bo
     auto* libraryPage = new QWidget(m_skinTabs);
     auto* libraryLayout = new QVBoxLayout(libraryPage);
     libraryLayout->setContentsMargins(0, 0, 0, 0);
+    auto* dropHint = new QLabel(tr("Drop a PNG or JPG skin here to add it to Cloudy Skin Studio"), libraryPage);
+    dropHint->setObjectName(QStringLiteral("cloudyDropZone"));
+    dropHint->setAlignment(Qt::AlignCenter);
+    dropHint->setMinimumHeight(42);
+    libraryLayout->addWidget(dropHint);
     libraryLayout->addWidget(contentsWidget);
     m_skinTabs->addTab(libraryPage, tr("Skin library"));
 
@@ -154,8 +159,10 @@ SkinManageDialog::SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct, bo
     m_presetList->setSelectionMode(QAbstractItemView::SingleSelection);
     auto* presetsButtons = new QHBoxLayout();
     auto* savePresetButton = new QPushButton(tr("Save current preset"), presetsPage);
+    auto* renamePresetButton = new QPushButton(tr("Rename preset"), presetsPage);
     auto* deletePresetButton = new QPushButton(tr("Delete preset"), presetsPage);
     presetsButtons->addWidget(savePresetButton);
+    presetsButtons->addWidget(renamePresetButton);
     presetsButtons->addWidget(deletePresetButton);
     presetsButtons->addStretch(1);
     presetsLayout->addWidget(m_presetList);
@@ -163,6 +170,7 @@ SkinManageDialog::SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct, bo
     m_skinTabs->addTab(presetsPage, tr("Presets (0/8)"));
     m_ui->mainHlLayout->addWidget(m_skinTabs);
     connect(savePresetButton, &QPushButton::clicked, this, &SkinManageDialog::savePreset);
+    connect(renamePresetButton, &QPushButton::clicked, this, &SkinManageDialog::renamePreset);
     connect(deletePresetButton, &QPushButton::clicked, this, &SkinManageDialog::deletePreset);
     connect(m_presetList, &QListWidget::itemDoubleClicked, this, &SkinManageDialog::loadPreset);
     setupPresets();
@@ -258,6 +266,27 @@ void SkinManageDialog::savePreset()
     m_skinTabs->setTabText(1, tr("Presets (%1/8)").arg(m_presetList->count()));
 }
 
+void SkinManageDialog::renamePreset()
+{
+    if (!m_presetList || !m_presetList->currentItem())
+        return;
+    auto* item = m_presetList->currentItem();
+    bool ok = false;
+    const auto name = QInputDialog::getText(this, tr("Rename preset"), tr("Name:"), QLineEdit::Normal, item->text(), &ok);
+    if (!ok || name.trimmed().isEmpty())
+        return;
+    item->setText(name.trimmed());
+    auto preset = item->data(Qt::UserRole).toJsonObject();
+    preset["name"] = name.trimmed();
+    item->setData(Qt::UserRole, preset);
+    QJsonArray presets;
+    for (int i = 0; i < m_presetList->count(); ++i)
+        presets.append(m_presetList->item(i)->data(Qt::UserRole).toJsonObject());
+    QFile out(FS::PathCombine(m_list.getDir(), "presets.json"));
+    if (out.open(QIODevice::WriteOnly | QIODevice::Truncate))
+        out.write(QJsonDocument(QJsonObject{{"presets", presets}}).toJson(QJsonDocument::Indented));
+}
+
 void SkinManageDialog::deletePreset()
 {
     if (!m_presetList || !m_presetList->currentItem())
@@ -337,7 +366,7 @@ void SkinManageDialog::on_openDirBtn_clicked()
 
 void SkinManageDialog::on_fileBtn_clicked()
 {
-    auto filter = QMimeDatabase().mimeTypeForName("image/png").filterString();
+    const auto filter = tr("Skin images (*.png *.jpg *.jpeg)");
     QString raw_path = QFileDialog::getOpenFileName(this, tr("Select Skin Texture"), QString(), filter);
     if (raw_path.isNull()) {
         return;
