@@ -31,6 +31,12 @@ class PageViewDelegate : public QStyledItemDelegate {
     {
         QSize size = QStyledItemDelegate::sizeHint(option, index);
         size.setHeight(qMax(size.height(), 32));
+        if (const auto* view = qobject_cast<const QListView*>(parent()); view && view->model()) {
+            const int count = view->model()->rowCount();
+            const int availableWidth = view->viewport()->width();
+            if (count > 0 && availableWidth > 0)
+                size.setWidth(qMax(42, availableWidth / count - view->spacing()));
+        }
         return size;
     }
 };
@@ -91,48 +97,26 @@ class PageView : public QListView {
         setItemDelegate(new PageViewDelegate(this));
         setViewMode(QListView::ListMode);
         setFlow(QListView::LeftToRight);
-        setWrapping(true);
+        setWrapping(false);
         setResizeMode(QListView::Adjust);
         setMovement(QListView::Static);
         setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        setMinimumHeight(52);
-        setSpacing(4);
-    }
-
-    void updateWrappedHeight()
-    {
-        if (!model() || model()->rowCount() == 0 || viewport()->width() <= 0)
-            return;
-
-        const int availableWidth = viewport()->width();
-        int rows = 1;
-        int currentWidth = 0;
-        int rowHeight = 32;
-        for (int row = 0; row < model()->rowCount(); ++row) {
-            const auto itemSize = sizeHintForIndex(model()->index(row, 0));
-            const int itemWidth = itemSize.width() + spacing();
-            if (currentWidth > 0 && currentWidth + itemWidth > availableWidth) {
-                ++rows;
-                currentWidth = 0;
-            }
-            currentWidth += itemWidth;
-            rowHeight = qMax(rowHeight, itemSize.height());
-        }
-        setFixedHeight(rows * rowHeight + 2 * frameWidth());
-        updateGeometry();
+        setTextElideMode(Qt::ElideRight);
+        setFixedHeight(52);
+        setSpacing(2);
     }
 
     virtual QSize sizeHint() const
     {
-        return QSize(360, qMax(52, height()));
+        return QSize(360, 52);
     }
 
    protected:
     void resizeEvent(QResizeEvent* event) override
     {
         QListView::resizeEvent(event);
-        updateWrappedHeight();
+        doItemsLayout();
     }
 
    public:
