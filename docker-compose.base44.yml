@@ -1,0 +1,11 @@
+services:
+  web:
+    image: python:3.12-slim
+    working_dir: /app
+    command: python scripts/serve_web.py
+    volumes:
+      - ./:/app
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
