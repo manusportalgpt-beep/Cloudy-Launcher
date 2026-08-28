@@ -493,3 +493,26 @@ html[data-weather-theme="snow"][data-snow-variant="light"] .welcome-shell, html[
 .snow-light .instance-detail-hero { background: linear-gradient(135deg, rgba(255,255,255,.94), rgba(239,246,250,.9)); }
 .snow-light .instance-detail-art { background: #eaf2f5; }
 .instance-detail-page .status-dot { background: currentColor; }
+
+/* Cloudy first-run security step */
+.security-onboarding { max-width: 900px; }
+.security-card { display: flex; align-items: flex-start; gap: 16px; margin-top: 18px; padding: 16px 18px; border: 1px solid var(--line-strong); border-radius: 14px; background: rgba(24, 42, 68, .72); }
+.security-card strong { display: block; font-size: 14px; }
+.security-card p { margin: 6px 0 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.security-icon { flex: 0 0 34px; width: 34px; height: 34px; border: 1px solid var(--line-strong); border-radius: 10px; background: rgba(255,255,255,.08); position: relative; }
+.security-shield::before { content: ""; position: absolute; inset: 8px 10px 7px; border: 2px solid var(--white); border-radius: 8px 8px 10px 10px; clip-path: polygon(50% 0, 100% 18%, 90% 72%, 50% 100%, 10% 72%, 0 18%); }
+.security-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.security-list > div { display: flex; align-items: flex-start; gap: 10px; min-height: 84px; padding: 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-soft); }
+.security-list p { margin: 0; }
+.security-list strong { display: block; font-size: 11px; }
+.security-list small { display: block; margin-top: 5px; color: var(--muted); font-size: 9px; line-height: 1.45; }
+.security-app-icon { position: relative; display: block; flex: 0 0 28px; width: 28px; height: 28px; border: 1px solid var(--line-strong); border-radius: 8px; background: rgba(255,255,255,.07); }
+.security-yandex-icon::before { content: "Y"; position: absolute; inset: 3px; color: var(--white); font: 700 17px/20px sans-serif; text-align: center; }
+.security-360-icon::before { content: "360"; position: absolute; inset: 6px 2px; color: var(--white); font: 700 8px/14px sans-serif; text-align: center; }
+.security-check-icon::before { content: "✓"; position: absolute; inset: 1px; color: var(--white); font: 700 22px/25px sans-serif; text-align: center; }
+.security-consent { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; padding: 13px 15px; border: 1px solid var(--line-strong); border-radius: 12px; background: rgba(255,255,255,.06); color: var(--text); font-size: 11px; line-height: 1.45; cursor: pointer; }
+.security-consent input { width: 16px; height: 16px; margin: 0; accent-color: var(--white); cursor: pointer; }
+.security-consent:has(input:checked) { background: rgba(255,255,255,.12); }
+.onboarding-footer .action-button:disabled { opacity: .42; cursor: not-allowed; transform: none; }
+html[data-weather-theme="snow"][data-snow-variant="light"] .security-card, html[data-weather-theme="snow"][data-snow-variant="light"] .security-list > div, html[data-weather-theme="snow"][data-snow-variant="light"] .security-consent { background: rgba(255,255,255,.88); }
+@media (max-width: 760px) { .security-list { grid-template-columns: 1fr; } }
